@@ -21,6 +21,14 @@ export function Home() {
   const [searchInput, setSearchInput] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Handle scroll for sticky navbar
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Initial Data Load (Hero + Rows)
   useEffect(() => {
@@ -87,55 +95,96 @@ export function Home() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Reusable Carousel Component
-  const CarouselRow = ({ title, items }: { title: string, items: MediaItem[] }) => (
-    <div className="mb-10 pl-4 md:pl-12">
-      <h2 className="text-xl md:text-2xl font-bold text-white mb-4 drop-shadow-md">{title}</h2>
-      <div className="flex gap-4 overflow-x-auto pb-6 pt-2 pr-12 custom-scrollbar scroll-smooth snap-x snap-mandatory">
-        {items.map(item => (
-          <Link 
-            to={`/media/${item.id}`} 
-            key={item.id} 
-            className="shrink-0 w-36 md:w-48 lg:w-56 snap-start group relative transition-transform duration-300 hover:scale-105 hover:z-10"
-          >
-            <div className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] border border-transparent group-hover:border-slate-500 transition-colors">
-              <img 
-                src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
-                alt={item.title} 
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-                <p className="text-white font-bold text-sm leading-tight line-clamp-2">{item.title}</p>
-                <p className="text-gray-300 text-xs mt-1">{item.date}</p>
-              </div>
-            </div>
-          </Link>
-        ))}
+  // Reusable Carousel Component with Scroll Arrows
+  const CarouselRow = ({ title, items }: { title: string, items: MediaItem[] }) => {
+    const scrollLeft = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.parentElement?.querySelector('.carousel-container')?.scrollBy({ left: -800, behavior: 'smooth' });
+    };
+    const scrollRight = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.parentElement?.querySelector('.carousel-container')?.scrollBy({ left: 800, behavior: 'smooth' });
+    };
+
+    return (
+      <div className="mb-12 relative group/row">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-200 hover:text-white mb-2 px-4 md:px-12 transition-colors cursor-pointer">
+          {title}
+        </h2>
+        <div className="relative">
+          <button onClick={scrollLeft} className="absolute left-0 top-0 bottom-0 w-12 bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover/row:opacity-100 transition-all z-20 flex items-center justify-center">
+            <span className="text-3xl font-bold">&lsaquo;</span>
+          </button>
+          
+          <div className="carousel-container flex gap-2 overflow-x-auto pb-8 pt-4 px-4 md:px-12 scroll-smooth snap-x snap-mandatory no-scrollbar">
+            {items.map(item => (
+              <Link 
+                to={`/media/${item.id}`} 
+                key={item.id} 
+                className="shrink-0 w-[140px] md:w-[220px] lg:w-[260px] snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 rounded-md overflow-hidden bg-slate-900 shadow-lg aspect-[2/3] cursor-pointer origin-center"
+              >
+                <img 
+                  src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
+                  alt={item.title} 
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                  <h3 className="text-white font-bold text-sm md:text-base leading-tight line-clamp-2 drop-shadow-md mb-2">{item.title}</h3>
+                  <div className="flex items-center gap-2 text-xs font-semibold">
+                    <span className="text-green-500">Nuevo</span>
+                    <span className="text-gray-300 border border-gray-600 px-1">HD</span>
+                    <span className="text-gray-300">{item.duration || 'N/A'}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <button onClick={scrollRight} className="absolute right-0 top-0 bottom-0 w-12 bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover/row:opacity-100 transition-all z-20 flex items-center justify-center">
+            <span className="text-3xl font-bold">&rsaquo;</span>
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#141414] font-sans pb-10">
-      {/* Absolute Header Overlay */}
-      <header className="absolute top-0 w-full z-50 p-4 md:px-12 md:py-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-b from-black/80 to-transparent">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-red-600 tracking-wider uppercase drop-shadow-md cursor-pointer" onClick={() => setSearchInput('')}>
-          Gaton Play
-        </h1>
-        
-        <div className="w-full md:w-96 relative">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            🔍
-          </span>
-          <input
-            type="text"
-            placeholder="Títulos, personas, géneros..."
-            className="w-full pl-10 pr-4 py-2 rounded-full bg-black/60 border border-gray-600 text-white text-sm focus:outline-none focus:border-white focus:bg-black/80 transition-all backdrop-blur-md"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
+      {/* Netflix Navbar */}
+      <header className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? 'bg-[#141414] shadow-lg' : 'bg-gradient-to-b from-black/80 to-transparent'}`}>
+        <div className="flex flex-col md:flex-row justify-between items-center px-4 md:px-12 py-4 gap-4">
+          <div className="flex items-center gap-8">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-[#E50914] tracking-wider drop-shadow-md cursor-pointer" onClick={() => setSearchInput('')}>
+              GATON
+            </h1>
+            <nav className="hidden lg:flex gap-5 text-sm text-gray-300">
+              <a href="#" className="font-bold text-white hover:text-gray-300 transition-colors">Inicio</a>
+              <a href="#" className="hover:text-gray-300 transition-colors">Series</a>
+              <a href="#" className="hover:text-gray-300 transition-colors">Películas</a>
+              <a href="#" className="hover:text-gray-300 transition-colors">Novedades populares</a>
+              <a href="#" className="hover:text-gray-300 transition-colors">Mi lista</a>
+            </nav>
+          </div>
+          
+          <div className="w-full md:w-auto flex items-center gap-6">
+            <div className="relative group/search w-full md:w-64">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white font-bold text-lg">
+                ⚲
+              </span>
+              <input
+                type="text"
+                placeholder="Títulos, géneros..."
+                className="w-full pl-10 pr-4 py-1.5 rounded-sm bg-black/60 border border-transparent focus:border-white text-white text-sm focus:outline-none transition-all placeholder-gray-400 group-hover/search:bg-black/80 group-hover/search:border-white"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+            </div>
+            <div className="hidden md:flex items-center gap-4 text-white">
+              <span className="cursor-pointer font-bold text-sm">Niños</span>
+              <span className="cursor-pointer text-xl">🔔</span>
+              <div className="w-8 h-8 bg-blue-600 rounded-sm cursor-pointer border border-transparent hover:border-white transition-colors"></div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -237,10 +286,15 @@ export function Home() {
 
       {/* Tailwind Custom Scrollbar for Netflix rows */}
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
         body { background-color: #141414; }
       `}</style>
     </div>
