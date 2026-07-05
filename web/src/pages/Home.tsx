@@ -146,9 +146,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
   // Real-time debounce effect for Search
   useEffect(() => {
     const timer = setTimeout(async () => {
-      setActiveSearch(searchInput);
       if (searchInput.trim() !== '') {
-        setLoading(true);
         const { data } = await supabase
           .from('all')
           .select('id, title, poster, date, duration, sinopsis')
@@ -156,9 +154,10 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
           .order('id', { ascending: false })
           .limit(48);
         setSearchResults((data as MediaItem[]) || []);
-        setLoading(false);
+      } else {
+        setSearchResults([]);
       }
-    }, 400);
+    }, 150);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
@@ -250,17 +249,65 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
           </div>
           
           <div className="w-full md:w-auto flex items-center gap-6">
-            <div className="relative group/search w-full md:w-64">
+            <div className="relative group/search w-full md:w-64 z-[60]">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white font-bold text-lg">
                 ⚲
               </span>
               <input
                 type="text"
                 placeholder="Títulos, géneros..."
-                className="w-full pl-10 pr-4 py-1.5 rounded-sm bg-black/60 border border-transparent focus:border-white text-white text-sm focus:outline-none transition-all placeholder-gray-400 group-hover/search:bg-black/80 group-hover/search:border-white"
+                className="w-full pl-10 pr-4 py-1.5 rounded-sm bg-black/60 border border-transparent focus:border-white text-white text-sm focus:outline-none transition-all placeholder-gray-400 focus:bg-black/90 focus:w-80 group-hover/search:bg-black/80 group-hover/search:border-white"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setActiveSearch(searchInput);
+                    setActiveCategory('Buscar');
+                  }
+                }}
               />
+              
+              {/* Ultrarapid Search Dropdown */}
+              {searchInput.trim() !== '' && !activeSearch && (
+                <div className="absolute top-full right-0 mt-2 w-[350px] md:w-[450px] bg-[#141414]/95 backdrop-blur-md border border-gray-800 rounded-md shadow-2xl overflow-hidden z-50 animate-fade-in-up">
+                  {searchResults.length > 0 ? (
+                    <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-2">
+                      <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 px-2 pt-2">Resultados Rápidos</h3>
+                      <div className="flex flex-col gap-1">
+                        {searchResults.slice(0, 6).map(item => (
+                          <div 
+                            key={item.id}
+                            className="flex items-center gap-4 p-2 hover:bg-[#2a2a2a] rounded-md cursor-pointer transition-colors group"
+                            onClick={() => {
+                              setSearchInput('');
+                              navigate(`/media/${item.id}`);
+                            }}
+                          >
+                            <img src={item.poster} alt={item.title} className="w-12 h-16 object-cover rounded shadow" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/120x160?text=No+Poster'; }} />
+                            <div className="flex-1 overflow-hidden">
+                              <h4 className="text-white font-bold text-sm group-hover:text-[#E50914] transition-colors truncate">{item.title}</h4>
+                              <p className="text-xs text-gray-500 mt-1">{item.date} • {item.duration}</p>
+                            </div>
+                            <span className="text-gray-500 group-hover:text-white mr-2">▶</span>
+                          </div>
+                        ))}
+                      </div>
+                      {searchResults.length > 6 && (
+                        <button 
+                          onClick={() => { setActiveSearch(searchInput); setActiveCategory('Buscar'); }} 
+                          className="w-full mt-2 py-3 text-center text-sm font-bold text-white bg-black/50 hover:bg-[#E50914] rounded-md transition-colors"
+                        >
+                          Ver todos los {searchResults.length} resultados
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-gray-500">
+                      No hay resultados para "{searchInput}"
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="hidden md:flex items-center gap-4 text-white">
               <span className="cursor-pointer text-xl hover:text-gray-300 transition-colors">🔔</span>
