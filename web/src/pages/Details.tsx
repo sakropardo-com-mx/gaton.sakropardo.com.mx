@@ -68,19 +68,35 @@ export function Details() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-6 max-w-5xl mx-auto font-sans">
-      <Link to="/" className="inline-flex items-center text-sm text-gray-400 hover:text-white mb-4 transition-colors group">
-        <span className="mr-2 group-hover:-translate-x-1 transition-transform">&larr;</span> Volver
-      </Link>
-
-      <div className="bg-slate-800 rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 flex flex-col md:flex-row">
-        {/* Poster Section */}
-        <div className="w-full md:w-64 shrink-0 bg-slate-900 relative">
+    <div className="min-h-screen relative font-sans overflow-hidden bg-[#141414]">
+      {/* Immersive Blurred Background */}
+      {item.poster && (
+        <div className="absolute inset-0 z-0">
           <img 
-            src={item.poster || 'https://via.placeholder.com/400x600?text=No+Poster'} 
-            alt={item.title}
-            className="w-full h-full md:h-[400px] object-cover"
+            src={item.poster} 
+            alt="background" 
+            className="w-full h-full object-cover opacity-20 blur-3xl scale-110"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#141414]/50 via-[#141414]/80 to-[#141414]"></div>
+        </div>
+      )}
+
+      {/* Main Content Container */}
+      <div className="relative z-10 p-4 md:p-10 max-w-5xl mx-auto pt-8">
+        <Link to="/" className="inline-flex items-center text-sm text-gray-400 hover:text-white mb-6 transition-colors group bg-black/40 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+          <span className="mr-2 group-hover:-translate-x-1 transition-transform">&larr;</span> Volver al Catálogo
+        </Link>
+
+        <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col md:flex-row">
+          {/* Poster Section */}
+          <div className="w-full md:w-72 shrink-0 bg-black relative">
+            <img 
+              src={item.poster || 'https://via.placeholder.com/400x600?text=No+Poster'} 
+              alt={item.title}
+              className="w-full h-full md:h-[450px] object-cover"
+              onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/400x600?text=No+Poster'; }}
+            />
           {isWatched && (
             <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
               ✓ Visto
@@ -174,6 +190,8 @@ export function Details() {
         </div>
       </div>
       
+      </div>
+
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

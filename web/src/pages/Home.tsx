@@ -104,6 +104,7 @@ export function Home() {
                 alt={item.title} 
                 className="w-full h-full object-cover"
                 loading="lazy"
+                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
                 <p className="text-white font-bold text-sm leading-tight line-clamp-2">{item.title}</p>
@@ -149,7 +150,12 @@ export function Home() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {searchResults.map(item => (
                 <Link to={`/media/${item.id}`} key={item.id} className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] group relative transition-transform hover:scale-105 hover:z-10">
-                  <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />
+                  <img 
+                    src={item.poster} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                     <p className="text-white font-bold text-sm leading-tight line-clamp-2">{item.title}</p>
                   </div>
@@ -177,6 +183,7 @@ export function Home() {
                       src={featured.poster || 'https://via.placeholder.com/1920x1080?text=Banner'} 
                       alt={featured.title}
                       className="w-full h-full object-cover opacity-70"
+                      onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/1920x1080?text=Banner'; }}
                     />
                     {/* Dark Gradients for Netflix effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent"></div>
