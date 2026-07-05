@@ -71,6 +71,8 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
         .order('id', { ascending: false })
         .limit(20);
 
+      if (serieData) setSeries(serieData as MediaItem[]);
+
       // 4. Load Continue Watching from localStorage
       const watchedIds = Object.keys(localStorage)
         .filter(k => k.startsWith('watched_') && localStorage.getItem(k) === 'true')
