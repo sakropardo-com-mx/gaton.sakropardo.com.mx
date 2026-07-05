@@ -128,10 +128,10 @@ export function Home() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {data.map((item) => (
-          <Link to={`/media/${item.id}`} key={item.id} className="bg-slate-800 rounded-2xl overflow-hidden shadow-xl border border-slate-700/50 hover:shadow-2xl hover:border-purple-500/50 transition-all duration-300 group flex flex-col">
-            <div className="relative h-96 overflow-hidden bg-slate-900">
+          <Link to={`/media/${item.id}`} key={item.id} className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700/50 hover:shadow-xl hover:border-purple-500/50 transition-all duration-300 group flex flex-col">
+            <div className="relative h-64 overflow-hidden bg-slate-900">
               <img 
                 src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
                 alt={item.title} 
@@ -139,18 +139,18 @@ export function Home() {
                 loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90"></div>
-              <div className="absolute bottom-4 left-4 right-4">
-                <h2 className="text-xl font-bold text-white leading-tight drop-shadow-md">{item.title}</h2>
-                <p className="text-sm text-gray-300 mt-1">{item.date} • {item.duration}</p>
+              <div className="absolute bottom-3 left-3 right-3">
+                <h2 className="text-base font-bold text-white leading-tight drop-shadow-md line-clamp-2">{item.title}</h2>
+                <p className="text-xs text-gray-300 mt-1 truncate">{item.date} • {item.duration}</p>
               </div>
             </div>
-            <div className="p-5 flex-grow flex flex-col">
-              <p className="text-gray-400 text-sm line-clamp-3 mb-4 flex-grow">
+            <div className="p-3 flex-grow flex flex-col">
+              <p className="text-gray-400 text-xs line-clamp-2 mb-3 flex-grow">
                 {item.sinopsis || "Sin sinopsis disponible."}
               </p>
               <div className="mt-auto pt-2 border-t border-slate-700/50 text-center">
-                <span className="text-purple-400 font-semibold group-hover:text-purple-300 transition-colors">
-                  Ver Detalles y Descargar &rarr;
+                <span className="text-purple-400 text-sm font-semibold group-hover:text-purple-300 transition-colors">
+                  Descargar &rarr;
                 </span>
               </div>
             </div>

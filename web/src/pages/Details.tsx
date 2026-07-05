@@ -97,17 +97,17 @@ export function Details() {
             </h3>
             
             {item.links && item.links.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
                 {item.links.map((link: string, index: number) => (
                   <a 
                     key={index}
                     href={link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between p-4 bg-slate-800 rounded-xl hover:bg-purple-900/40 border border-slate-700 hover:border-purple-500 transition-all group"
+                    className="block p-3 bg-slate-800 rounded-lg hover:bg-purple-900/40 border border-slate-700 hover:border-purple-500 transition-all text-gray-300 hover:text-white text-sm break-all"
                   >
-                    <span className="text-gray-200 font-medium group-hover:text-white">Opción {index + 1}</span>
-                    <span className="text-purple-400 group-hover:text-purple-300 font-bold">&rarr;</span>
+                    <span className="font-bold text-purple-400 mr-2">[{index + 1}]</span>
+                    {link}
                   </a>
                 ))}
               </div>
