@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabase';
+// @ts-ignore
 import Plyr from 'plyr-react';
 import 'plyr-react/plyr.css';
 
@@ -31,7 +32,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
       
       // Load previous time if exists
       if (index !== undefined) {
-        const savedData = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index] };
+        const savedData: any = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index], time: 0 };
         if (savedData.time && savedData.time > 5) {
           player.currentTime = savedData.time;
         }
@@ -437,7 +438,6 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                 <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                   {item.links.map((link: string, index: number) => {
                     const isSeason = link.toLowerCase().includes('temporada');
-                    const isSeen = episodeProgress[index];
                     
                     // Intentar extraer el número real del capítulo desde la URL
                     let displayNumber: string | number = index + 1;
