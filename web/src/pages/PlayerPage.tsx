@@ -41,6 +41,29 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
   const plyrRef = useRef<any>(null);
   const hasSeekedInitialRef = useRef<Record<number, boolean>>({});
 
+  // Auto-hide top bar
+  const [isMouseIdle, setIsMouseIdle] = useState(false);
+  const mouseTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    const handleMouseMove = () => {
+      setIsMouseIdle(false);
+      if (mouseTimeoutRef.current) clearTimeout(mouseTimeoutRef.current);
+      mouseTimeoutRef.current = setTimeout(() => {
+        setIsMouseIdle(true);
+      }, 3000);
+    };
+
+    // Initial timeout
+    handleMouseMove();
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (mouseTimeoutRef.current) clearTimeout(mouseTimeoutRef.current);
+    };
+  }, []);
+
   const plyrSource = useMemo(() => ({
     type: 'video',
     sources: [{ src: streamVideoPath || '', type: 'video/mp4' }]
@@ -218,12 +241,6 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     if (streamStatus === 'ready' && plyrRef.current?.plyr) {
       const player = plyrRef.current.plyr;
       
-      const currentProgs = episodeProgressRef.current;
-      const savedData = typeof currentProgs[index] === 'object' ? currentProgs[index] : { seen: !!currentProgs[index], time: 0 };
-      if (!hasSeekedInitialRef.current[index] && savedData.time && savedData.time > 5) {
-        player.currentTime = savedData.time;
-        hasSeekedInitialRef.current[index] = true;
-      }
 
       let lastSavedTime = player.currentTime;
       const onTimeUpdate = () => {
@@ -242,23 +259,36 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
           playEpisode(allEpisodes[index + 1]);
         }
       };
+
+      const onLoadedMetadata = () => {
+        const currentProgs = episodeProgressRef.current;
+        const savedData = typeof currentProgs[index] === 'object' ? currentProgs[index] : { seen: !!currentProgs[index], time: 0 };
+        if (!hasSeekedInitialRef.current[index] && savedData.time && savedData.time > 5) {
+          player.currentTime = savedData.time;
+          hasSeekedInitialRef.current[index] = true;
+        }
+      };
       
       // Fix for "player.on is not a function" error
       if (typeof player.on === 'function') {
         player.on('timeupdate', onTimeUpdate);
         player.on('ended', onEnded);
+        player.on('loadedmetadata', onLoadedMetadata);
       } else if (typeof player.addEventListener === 'function') {
         player.addEventListener('timeupdate', onTimeUpdate);
         player.addEventListener('ended', onEnded);
+        player.addEventListener('loadedmetadata', onLoadedMetadata);
       }
       
       return () => {
         if (typeof player.off === 'function') {
           player.off('timeupdate', onTimeUpdate);
           player.off('ended', onEnded);
+          player.off('loadedmetadata', onLoadedMetadata);
         } else if (typeof player.removeEventListener === 'function') {
           player.removeEventListener('timeupdate', onTimeUpdate);
           player.removeEventListener('ended', onEnded);
+          player.removeEventListener('loadedmetadata', onLoadedMetadata);
         }
       };
     }
@@ -281,7 +311,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
   return (
     <div className="fixed inset-0 bg-black z-[200] flex flex-col font-sans">
        {/* Top Bar Overlay */}
-       <div className="absolute top-0 left-0 right-0 z-50 p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+       <div className={`absolute top-0 left-0 right-0 z-50 p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-opacity duration-500 ${isMouseIdle && streamStatus === 'ready' && !showEpisodesList ? 'opacity-0' : 'opacity-100'}`}>
          <button onClick={() => navigate(-1)} className="text-white text-xl bg-black/50 hover:bg-[#E50914] p-3 px-6 rounded font-bold transition-colors pointer-events-auto flex items-center gap-2">
             ← Volver a {episodeName}
          </button>
