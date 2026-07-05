@@ -1,7 +1,12 @@
 FROM python:3.11-slim
 
-# Install unrar for extracting mediafire files
-RUN apt-get update && apt-get install -y unrar curl && rm -rf /var/lib/apt/lists/*
+# Install unrar from official rarlab binaries
+RUN apt-get update && apt-get install -y wget curl && \
+    wget https://www.rarlab.com/rar/rarlinux-x64-700.tar.gz && \
+    tar -zxvf rarlinux-x64-700.tar.gz && \
+    cp rar/unrar /usr/local/bin/ && \
+    rm -rf rar rarlinux-x64-700.tar.gz && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
