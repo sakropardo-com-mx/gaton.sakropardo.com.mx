@@ -101,6 +101,7 @@ def process_download(job_id: str, mediafire_url: str, password: str):
         final_video = os.path.splitext(video_file)[0] + "_web.mp4"
         ffmpeg_cmd = [
             "ffmpeg", "-y", "-i", video_file, 
+            "-threads", "0",    # Use all available CPU cores
             "-c:v", "copy",     # Copy video stream to be blazing fast
             "-c:a", "aac",      # Convert audio to aac for browser compatibility
             "-b:a", "192k",
