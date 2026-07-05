@@ -18,7 +18,7 @@ export function Profiles({ onSelectProfile, userId }: { onSelectProfile: (name: 
 
   useEffect(() => {
     async function fetchProfiles() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
@@ -39,14 +39,14 @@ export function Profiles({ onSelectProfile, userId }: { onSelectProfile: (name: 
     if (newName.trim() === "") return;
     
     // Save to Supabase
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('profiles')
       .insert([
         { user_id: userId, name: newName, avatar: selectedAvatar }
       ])
       .select();
       
-    if (data && !error) {
+    if (data) {
       setProfiles([...profiles, data[0]]);
       setIsAdding(false);
       setNewName("");
