@@ -24,14 +24,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem('netflix_profile');
+    const saved = localStorage.getItem('gaton_active_profile');
     if (saved) setProfile(JSON.parse(saved));
   }, []);
 
   const handleProfileSelect = (name: string, avatar: string) => {
     const newProfile = { name, avatar };
     setProfile(newProfile);
-    localStorage.setItem('netflix_profile', JSON.stringify(newProfile));
+    localStorage.setItem('gaton_active_profile', JSON.stringify(newProfile));
   };
 
   if (loading) return <div className="h-screen bg-black" />;

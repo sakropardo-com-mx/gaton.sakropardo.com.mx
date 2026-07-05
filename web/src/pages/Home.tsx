@@ -263,13 +263,39 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
               />
             </div>
             <div className="hidden md:flex items-center gap-4 text-white">
-              <span className="cursor-pointer font-bold text-sm">Niños</span>
-              <span className="cursor-pointer text-xl">🔔</span>
-              <div className="flex items-center gap-2 cursor-pointer group">
+              <span className="cursor-pointer text-xl hover:text-gray-300 transition-colors">🔔</span>
+              <div className="flex items-center gap-2 cursor-pointer group relative">
                 <div className="w-8 h-8 rounded-sm overflow-hidden border border-transparent group-hover:border-white transition-colors">
                   <img src={activeProfile.avatar} alt={activeProfile.name} className="w-full h-full object-cover" />
                 </div>
-                <span className="text-xs">&#9660;</span>
+                <span className="text-xs group-hover:rotate-180 transition-transform duration-300">&#9660;</span>
+                
+                {/* Dropdown Menu */}
+                <div className="absolute top-full right-0 mt-4 w-48 bg-black/95 border border-gray-800 rounded-sm py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="px-4 py-2 text-sm text-gray-300 font-bold border-b border-gray-800 mb-2">
+                    {activeProfile.name}
+                  </div>
+                  <div 
+                    className="px-4 py-2 hover:bg-gray-800 flex items-center gap-3 text-sm text-gray-300 transition-colors"
+                    onClick={() => {
+                      localStorage.removeItem('gaton_active_profile');
+                      window.location.reload();
+                    }}
+                  >
+                    <span>👥</span> Administrar perfiles
+                  </div>
+                  <div className="border-t border-gray-800 my-2"></div>
+                  <div 
+                    className="px-4 py-2 hover:bg-gray-800 text-sm font-bold text-gray-300 transition-colors"
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      localStorage.removeItem('gaton_active_profile');
+                      window.location.reload();
+                    }}
+                  >
+                    Cerrar sesión
+                  </div>
+                </div>
               </div>
             </div>
           </div>

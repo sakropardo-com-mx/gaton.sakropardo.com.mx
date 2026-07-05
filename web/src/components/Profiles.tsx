@@ -144,7 +144,7 @@ export function Profiles({ onSelectProfile, userId }: { onSelectProfile: (name: 
       </div>
       
       <button 
-        onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem('netflix_profile'); }}
+        onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem('gaton_active_profile'); }}
         className="mt-20 border border-gray-500 text-gray-400 hover:border-white hover:text-white px-8 py-2 uppercase tracking-widest text-lg transition-colors"
       >
         Cerrar sesión
