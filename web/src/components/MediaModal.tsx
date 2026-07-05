@@ -100,6 +100,29 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     fetchDetailsAndInteractions();
   }, [id, profileId]);
 
+  // Precompute episodes
+  const episodesList = item?.links ? item.links.map((link: string, index: number) => {
+    const isSeason = link.toLowerCase().includes('temporada');
+    let displayNumber: string | number = index + 1;
+    const match = link.match(/(?:_|-|\.|episodio|cap|capitulo)\s*0*(\d+)(?:\.rar|\.zip|\.mp4|\.mkv|\.avi|\/|$)/i);
+    if (match && match[1] && parseInt(match[1]) > index) {
+      displayNumber = match[1];
+    }
+    const tmdbEpisode = tmdbEpisodes.find(e => e.episode_number == displayNumber);
+    const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio ${displayNumber}`);
+    const isCached = !!serverCache[link];
+    
+    return {
+      link,
+      index,
+      displayNumber,
+      isSeason,
+      episodeName,
+      isCached,
+      cachedUrl: serverCache[link] || null
+    };
+  }) : [];
+
   const startStream = (link: string, index: number, _displayNumber: string | number, _isSeason: boolean, episodeName: string, e: React.MouseEvent) => {
     e.preventDefault();
     navigate(`/play/${id}`, {
@@ -108,7 +131,8 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
         index,
         password: item?.contrasena || '',
         episodeName,
-        cachedUrl: serverCache[link] || null
+        cachedUrl: serverCache[link] || null,
+        allEpisodes: episodesList
       }
     });
   };
@@ -247,21 +271,10 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                 Descargas y Capítulos
               </h3>
               
-              {item.links && item.links.length > 0 ? (
+              {episodesList.length > 0 ? (
                 <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                  {item.links.map((link: string, index: number) => {
-                    const isSeason = link.toLowerCase().includes('temporada');
-                    
-                    let displayNumber: string | number = index + 1;
-                    const match = link.match(/(?:_|-|\.|episodio|cap|capitulo)\s*0*(\d+)(?:\.rar|\.zip|\.mp4|\.mkv|\.avi|\/|$)/i);
-                    if (match && match[1] && parseInt(match[1]) > index) {
-                      displayNumber = match[1];
-                    }
-                    
-                    const tmdbEpisode = tmdbEpisodes.find(e => e.episode_number == displayNumber);
-                    const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio ${displayNumber}`);
-                    
-                    const isCached = !!serverCache[link];
+                  {episodesList.map((ep: any) => {
+                    const { link, index, displayNumber, isSeason, episodeName, isCached } = ep;
                     
                     const progressData = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index] };
                     const isSeen = progressData.seen;
