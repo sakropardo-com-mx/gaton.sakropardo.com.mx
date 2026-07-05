@@ -79,14 +79,17 @@ export function Home() {
     }
   }, [page]);
 
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setActiveSearch(searchInput);
-    setPage(0);
-  };
+  // Real-time debounce effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setActiveSearch(searchInput);
+      setPage(0);
+    }, 400); // 400ms debounce
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   return (
-    <div className="min-h-screen p-8 max-w-7xl mx-auto font-sans">
+    <div className="min-h-screen p-8 max-w-[90rem] mx-auto font-sans">
       <header className="mb-10 text-center">
         <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 mb-4 drop-shadow-sm">
           Gaton Play Series
@@ -95,18 +98,18 @@ export function Home() {
       </header>
 
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700/50 backdrop-blur-sm">
-        <form onSubmit={handleSearch} className="w-full md:w-1/2 flex">
+        <div className="w-full md:w-1/2 flex relative">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            🔍
+          </span>
           <input
             type="text"
-            placeholder="Buscar título..."
-            className="flex-grow p-3 rounded-l-lg bg-slate-900 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all shadow-inner"
+            placeholder="Escribe para buscar en tiempo real en toda la base de datos..."
+            className="flex-grow pl-10 pr-4 py-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all shadow-inner w-full"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
-          <button type="submit" className="px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-r-lg font-bold text-white transition-colors">
-            Buscar
-          </button>
-        </form>
+        </div>
         
         <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
           {['Todos', 'Peliculas', 'Series'].map(cat => (
