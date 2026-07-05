@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabase';
+import Plyr from 'plyr-react';
+import 'plyr-react/plyr.css';
 
 export function MediaModal({ id, profileId, onClose }: { id: number; profileId: string; onClose: () => void }) {
   const [item, setItem] = useState<any>(null);
@@ -15,10 +17,56 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [streamProgress, setStreamProgress] = useState<number>(0);
   const [streamVideoPath, setStreamVideoPath] = useState<string | null>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
-  const [streamMetadata, setStreamMetadata] = useState<{number: string | number, isSeason: boolean, episodeName: string} | null>(null);
+  const [streamMetadata, setStreamMetadata] = useState<{index: number, number: string | number, isSeason: boolean, episodeName: string} | null>(null);
   const [tmdbEpisodes, setTmdbEpisodes] = useState<any[]>([]);
   const [serverCache, setServerCache] = useState<Record<string, string>>({});
   const pollingInterval = useRef<any>(null);
+  const plyrRef = useRef<any>(null);
+
+  // Sync plyr time to supabase
+  useEffect(() => {
+    if (streamStatus === 'ready' && plyrRef.current?.plyr) {
+      const player = plyrRef.current.plyr;
+      const index = streamMetadata?.index;
+      
+      // Load previous time if exists
+      if (index !== undefined) {
+        const savedData = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index] };
+        if (savedData.time && savedData.time > 5) {
+          player.currentTime = savedData.time;
+        }
+      }
+
+      // Save time every 10 seconds
+      let lastSavedTime = player.currentTime;
+      const onTimeUpdate = () => {
+        if (index === undefined) return;
+        const time = player.currentTime;
+        if (Math.abs(time - lastSavedTime) > 10) {
+          lastSavedTime = time;
+          setEpisodeProgress(prev => {
+            const prevData = typeof prev[index] === 'object' ? prev[index] : { seen: !!prev[index] };
+            const newProgress = { ...prev, [index]: { ...prevData, time } };
+            
+            // Fire and forget save
+            supabase.from('interactions').upsert({
+              profile_id: profileId,
+              media_id: id,
+              episode_progress: newProgress,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'profile_id,media_id' }).then();
+            
+            return newProgress;
+          });
+        }
+      };
+      
+      player.on('timeupdate', onTimeUpdate);
+      return () => {
+        if (player) player.off('timeupdate', onTimeUpdate);
+      };
+    }
+  }, [streamStatus, streamMetadata]);
 
   const cleanTitleText = (rawTitle: string) => {
     return rawTitle
@@ -141,13 +189,13 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     return () => clearInterval(pollingInterval.current);
   }, [streamJobId, streamStatus]);
 
-  const startStream = async (url: string, displayNumber: string | number, isSeason: boolean, episodeName: string, e: React.MouseEvent) => {
+  const startStream = async (url: string, index: number, displayNumber: string | number, isSeason: boolean, episodeName: string, e: React.MouseEvent) => {
     e.preventDefault();
     setStreamError(null);
     setStreamVideoPath(null);
     setStreamProgress(0);
     setStreamStatus('started');
-    setStreamMetadata({ number: displayNumber, isSeason, episodeName });
+    setStreamMetadata({ index, number: displayNumber, isSeason, episodeName });
     
     // Clear any previous job
     if (streamJobId) {
@@ -204,7 +252,8 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     e.preventDefault();
     e.stopPropagation();
 
-    const newProgress = { ...episodeProgress, [index]: !episodeProgress[index] };
+    const prevData = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index] };
+    const newProgress = { ...episodeProgress, [index]: { ...prevData, seen: !prevData.seen } };
     setEpisodeProgress(newProgress);
 
     const { error } = await supabase.from('interactions').upsert({
@@ -260,12 +309,17 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
           {streamStatus !== 'idle' ? (
             <div className="w-full h-full flex flex-col items-center justify-center bg-black relative z-10">
               {streamStatus === 'ready' && streamVideoPath ? (
-                <div className="w-full h-full relative group">
-                  <video 
-                    src={streamVideoPath} 
-                    controls 
-                    autoPlay 
-                    className="w-full h-full bg-black outline-none"
+                <div className="w-full h-full relative group plyr-container">
+                  <Plyr 
+                    ref={plyrRef}
+                    source={{
+                      type: 'video',
+                      sources: [{ src: streamVideoPath, type: 'video/mp4' }]
+                    }}
+                    options={{
+                      autoplay: true,
+                      controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen']
+                    }}
                   />
                   <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <a 
@@ -396,20 +450,24 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                     const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio ${displayNumber}`);
                     
                     const isCached = !!serverCache[link];
+                    
+                    const progressData = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index] };
+                    const isSeen = progressData.seen;
 
                     return (
-                    <div key={index} className="flex gap-2 items-center group">
-                      <button 
-                        onClick={(e) => toggleEpisode(index, e)}
-                        className={`w-8 h-8 rounded-full border border-gray-500 flex items-center justify-center transition-colors flex-shrink-0 ${isSeen ? 'bg-green-600 border-green-500 text-white' : 'hover:border-white text-transparent hover:text-white'}`}
-                        title={isSeen ? "Marcar como no visto" : "Marcar como visto"}
-                      >
-                        ✓
-                      </button>
-                      <button 
-                        onClick={(e) => startStream(link, displayNumber, isSeason, episodeName, e)}
-                        className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200 text-left`}
-                      >
+                    <div key={index} className="flex flex-col mb-4">
+                      <div className="flex gap-2 items-center group">
+                        <button 
+                          onClick={(e) => toggleEpisode(index, e)}
+                          className={`w-8 h-8 rounded-full border border-gray-500 flex items-center justify-center transition-colors flex-shrink-0 ${isSeen ? 'bg-green-600 border-green-500 text-white' : 'hover:border-white text-transparent hover:text-white'}`}
+                          title={isSeen ? "Marcar como no visto" : "Marcar como visto"}
+                        >
+                          ✓
+                        </button>
+                        <button 
+                          onClick={(e) => startStream(link, index, displayNumber, isSeason, episodeName, e)}
+                          className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200 text-left`}
+                        >
                         <div className="flex items-center gap-4">
                           <span className="text-2xl font-light text-gray-500 group-hover:text-white transition-colors min-w-[2rem] text-center">{displayNumber}</span>
                           <div>
@@ -429,6 +487,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                           </div>
                         </div>
                       </button>
+                      </div>
                     </div>
                   )})}
                 </div>
