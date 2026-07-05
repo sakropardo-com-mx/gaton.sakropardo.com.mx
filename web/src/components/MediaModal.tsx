@@ -20,6 +20,15 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [serverCache, setServerCache] = useState<Record<string, string>>({});
   const pollingInterval = useRef<any>(null);
 
+  const cleanTitleText = (rawTitle: string) => {
+    return rawTitle
+      .replace(/(Temporada|Season)\s*\d+/i, '')
+      .replace(/\[.*?\]/g, '')
+      .replace(/(MEDIAFIRE|MEGA|1080p|720p|4K|Latino|Ingles|Subtitulado|\.rar|\.zip|\.mkv|\.mp4)/gi, '')
+      .replace(/[/\\?%*:|"<>]/g, '') // Remove invalid file chars
+      .trim();
+  };
+
   useEffect(() => {
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
@@ -46,7 +55,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
           const seasonMatch = title.match(/Temporada\s*(\d+)/i);
           if (seasonMatch) seasonNumber = parseInt(seasonMatch[1]);
           
-          const cleanTitle = title.replace(/Temporada\s*\d+/i, '').replace(/\[.*\]/g, '').trim();
+          const cleanTitle = cleanTitleText(title);
           
           try {
             const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&language=es-MX&query=${encodeURIComponent(cleanTitle)}`);
@@ -118,6 +127,9 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
             
             // If job succeeds, clear interval immediately
             if (data.status === 'ready' || data.status === 'error') {
+              if (data.status === 'ready' && data.video_path) {
+                setServerCache(prev => ({...prev, [streamJobId]: data.video_path})); // streamJobId is MD5, but cache uses URL. We need URL!
+              }
               clearInterval(pollingInterval.current);
             }
           }
@@ -258,7 +270,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                   <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <a 
                       href={streamVideoPath} 
-                      download={streamMetadata ? `${item.title.replace(/[/\\?%*:|"<>]/g, '-')} - E${streamMetadata.number} ${streamMetadata.episodeName}.mp4` : 'video.mp4'}
+                      download={streamMetadata ? `${cleanTitleText(item.title)} - E${streamMetadata.number} ${streamMetadata.episodeName}.mp4` : 'video.mp4'}
                       className="bg-[#E50914] text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition flex items-center gap-2 text-sm shadow-lg"
                     >
                       ⬇ Descargar a PC
@@ -381,7 +393,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                     }
                     
                     const tmdbEpisode = tmdbEpisodes.find(e => e.episode_number == displayNumber);
-                    const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio / Parte ${displayNumber}`);
+                    const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio ${displayNumber}`);
                     
                     const isCached = !!serverCache[link];
 
