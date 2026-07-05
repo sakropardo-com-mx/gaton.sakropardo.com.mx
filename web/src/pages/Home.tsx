@@ -185,15 +185,15 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
             {items.map((item, index) => (
               <div 
                 key={item.id} 
-                className="shrink-0 flex items-center snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 cursor-pointer origin-center"
+                className={`shrink-0 flex items-center snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 cursor-pointer origin-center ${isTop10 ? 'pl-12 md:pl-20' : ''}`}
                 onClick={() => navigate(`/media/${item.id}`)}
               >
                 {isTop10 && (
-                  <span className="text-[120px] md:text-[180px] font-black tracking-tighter text-black outline-text leading-none mr-[-20px] md:mr-[-40px] z-0 select-none drop-shadow-2xl">
+                  <span className="absolute left-0 bottom-[-10px] md:bottom-[-20px] text-[140px] md:text-[240px] font-black tracking-tighter text-black outline-text leading-[0.8] z-0 select-none drop-shadow-2xl">
                     {index + 1}
                   </span>
                 )}
-                <div className={`rounded-md overflow-hidden bg-slate-900 shadow-lg aspect-[2/3] ${isTop10 ? 'w-[120px] md:w-[180px]' : 'w-[140px] md:w-[220px] lg:w-[260px]'} relative z-10`}>
+                <div className={`rounded-md overflow-hidden bg-slate-900 shadow-lg aspect-[2/3] ${isTop10 ? 'w-[120px] md:w-[160px] lg:w-[180px]' : 'w-[140px] md:w-[220px] lg:w-[260px]'} relative z-10`}>
                   <img 
                     src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
                     alt={item.title} 
