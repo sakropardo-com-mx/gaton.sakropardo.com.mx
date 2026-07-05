@@ -37,3 +37,26 @@ jobs:
         run: |
           rsync -avz --delete \
             ./web/dist/ root@${{ secrets.HETZNER_IP }}:/opt/jadenn-stack/web/public/sakropardo-com-mx/gaton.sakropardo.com.mx/
+
+      - name: ⚙️ Desplegar Backend (Streamer)
+        run: |
+          ssh root@${{ secrets.HETZNER_IP }} "mkdir -p /opt/jadenn-stack/apps/sakropardo-com-mx/gaton.sakropardo.com.mx-backend"
+          rsync -avz --delete \
+            ./backend/ root@${{ secrets.HETZNER_IP }}:/opt/jadenn-stack/apps/sakropardo-com-mx/gaton.sakropardo.com.mx-backend/
+            
+      - name: 🐳 Reconstruir y Levantar Backend en Docker
+        run: |
+          ssh root@${{ secrets.HETZNER_IP }} << 'EOF'
+            cd /opt/jadenn-stack/apps/sakropardo-com-mx/gaton.sakropardo.com.mx-backend
+            docker build -t gaton-streamer-backend .
+            docker stop gaton-streamer || true
+            docker rm gaton-streamer || true
+            # Create downloads directory for streaming
+            mkdir -p /opt/jadenn-stack/web/public/sakropardo-com-mx/gaton.sakropardo.com.mx/streams
+            docker run -d \
+              --name gaton-streamer \
+              --restart unless-stopped \
+              -p 127.0.0.1:8001:8000 \
+              -v /opt/jadenn-stack/web/public/sakropardo-com-mx/gaton.sakropardo.com.mx/streams:/downloads \
+              gaton-streamer-backend
+          EOF
