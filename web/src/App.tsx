@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Home } from './pages/Home';
 import { Profiles } from './components/Profiles';
 import { Login } from './pages/Login';
+import { PlayerPage } from './pages/PlayerPage';
 import { supabase } from './supabase';
 
 function App() {
@@ -63,6 +64,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home activeProfile={profile} />} />
         <Route path="/media/:modalId" element={<Home activeProfile={profile} />} />
+        <Route path="/play/:id" element={<PlayerPage activeProfile={profile} />} />
       </Routes>
     </Router>
   );
