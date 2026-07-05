@@ -67,7 +67,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
         .not('title', 'ilike', '%temporada%')
         .not('title', 'ilike', '%serie%')
         .order('id', { ascending: false })
-        .range(20, 40);
+        .limit(150);
         
       if (movieData) setMovies(movieData as MediaItem[]);
 
@@ -77,7 +77,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
         .select('id, title, poster, date, duration, sinopsis')
         .or('title.ilike.%temporada%,title.ilike.%serie%')
         .order('id', { ascending: false })
-        .limit(20);
+        .limit(150);
 
       if (serieData) setSeries(serieData as MediaItem[]);
 
@@ -469,15 +469,26 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
 
                 {activeCategory === 'Películas' && (
                   <>
-                    <CarouselRow title="Películas Destacadas" items={movies} />
+                    <CarouselRow title="Películas Top 10 en México Hoy" items={movies.slice(0, 10)} isTop10={true} />
+                    <CarouselRow title="Éxitos de Taquilla y Aclamadas" items={movies.slice(10, 30)} />
+                    <CarouselRow title="Películas de Acción y Aventura" items={movies.filter(m => m.sinopsis?.toLowerCase().includes('acción') || m.sinopsis?.toLowerCase().includes('aventura') || m.sinopsis?.toLowerCase().includes('batalla') || m.sinopsis?.toLowerCase().includes('guerra'))} />
+                    <CarouselRow title="Películas de Terror y Suspenso" items={movies.filter(m => m.sinopsis?.toLowerCase().includes('terror') || m.sinopsis?.toLowerCase().includes('miedo') || m.sinopsis?.toLowerCase().includes('suspenso') || m.sinopsis?.toLowerCase().includes('fantasma') || m.sinopsis?.toLowerCase().includes('asesin'))} />
+                    <CarouselRow title="Comedias para reír" items={movies.filter(m => m.sinopsis?.toLowerCase().includes('comedia') || m.sinopsis?.toLowerCase().includes('humor') || m.sinopsis?.toLowerCase().includes('risa'))} />
+                    <CarouselRow title="Ciencia Ficción y Fantasía" items={movies.filter(m => m.sinopsis?.toLowerCase().includes('ciencia') || m.sinopsis?.toLowerCase().includes('ficción') || m.sinopsis?.toLowerCase().includes('fantas') || m.sinopsis?.toLowerCase().includes('magia') || m.sinopsis?.toLowerCase().includes('espacio'))} />
                     <CarouselRow title="Agregadas Recientemente" items={recents.filter(r => !r.title.toLowerCase().includes('temporada') && !r.title.toLowerCase().includes('serie'))} />
+                    <CarouselRow title="Explorar más películas" items={movies.slice(30, 60)} />
                   </>
                 )}
                 
                 {activeCategory === 'Series' && (
                   <>
-                    <CarouselRow title="Series Populares" items={series} />
+                    <CarouselRow title="Series Top 10 en México Hoy" items={series.slice(0, 10)} isTop10={true} />
+                    <CarouselRow title="Series Populares" items={series.slice(10, 30)} />
+                    <CarouselRow title="Anime y Animación" items={series.filter(s => s.sinopsis?.toLowerCase().includes('anime') || s.sinopsis?.toLowerCase().includes('animad') || s.title.toLowerCase().includes('anime') || s.title.toLowerCase().includes('dragon') || s.title.toLowerCase().includes('naruto'))} />
+                    <CarouselRow title="Dramas y Crímenes" items={series.filter(s => s.sinopsis?.toLowerCase().includes('drama') || s.sinopsis?.toLowerCase().includes('suspenso') || s.sinopsis?.toLowerCase().includes('asesin') || s.sinopsis?.toLowerCase().includes('crimen') || s.sinopsis?.toLowerCase().includes('polic'))} />
+                    <CarouselRow title="Comedias de TV" items={series.filter(s => s.sinopsis?.toLowerCase().includes('comedia') || s.sinopsis?.toLowerCase().includes('humor') || s.sinopsis?.toLowerCase().includes('risa'))} />
                     <CarouselRow title="Episodios y Temporadas Recientes" items={recents.filter(r => r.title.toLowerCase().includes('temporada') || r.title.toLowerCase().includes('serie'))} />
+                    <CarouselRow title="Explorar más series" items={series.slice(30, 60)} />
                   </>
                 )}
               </div>
