@@ -9,8 +9,8 @@ const DEFAULT_AVATARS = [
   "https://mir-s3-cdn-cf.behance.net/project_modules/disp/1bdc9a33850498.56ba69ac2ba5b.png"
 ];
 
-export function Profiles({ onSelectProfile, userId }: { onSelectProfile: (name: string, avatar: string) => void, userId: string }) {
-  const [profiles, setProfiles] = useState<{name: string, avatar: string}[]>([]);
+export function Profiles({ onSelectProfile, userId }: { onSelectProfile: (id: string, name: string, avatar: string) => void, userId: string }) {
+  const [profiles, setProfiles] = useState<{id: string, name: string, avatar: string}[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState(DEFAULT_AVATARS[0]);
@@ -120,7 +120,7 @@ export function Profiles({ onSelectProfile, userId }: { onSelectProfile: (name: 
             key={idx} 
             className="flex flex-col items-center group cursor-pointer animate-fade-in-up"
             style={{ animationDelay: `${idx * 0.1}s` }}
-            onClick={() => onSelectProfile(p.name, p.avatar)}
+            onClick={() => onSelectProfile(p.id, p.name, p.avatar)}
           >
             <div className="w-28 h-28 md:w-40 md:h-40 rounded-md overflow-hidden border-2 border-transparent group-hover:border-white transition-all transform group-hover:scale-105 shadow-xl">
               <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" />

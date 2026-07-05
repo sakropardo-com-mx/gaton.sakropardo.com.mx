@@ -12,7 +12,7 @@ interface MediaItem {
   sinopsis: string;
 }
 
-export function Home({ activeProfile }: { activeProfile: { name: string, avatar: string } }) {
+export function Home({ activeProfile }: { activeProfile: { id: string, name: string, avatar: string } }) {
   const { modalId } = useParams();
   const navigate = useNavigate();
   
@@ -505,8 +505,8 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
         </>
       )}
 
-      {/* Render Modal Overlay */}
-      {modalId && <MediaModal id={parseInt(modalId, 10)} onClose={() => navigate('/')} />}
+      {/* Media Modal */}
+      {modalId && <MediaModal id={parseInt(modalId, 10)} profileId={activeProfile.id} onClose={() => navigate('/')} />}
 
       {/* Tailwind Custom Scrollbar for Netflix rows */}
       <style>{`

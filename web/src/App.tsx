@@ -8,7 +8,7 @@ import { supabase } from './supabase';
 function App() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{name: string, avatar: string} | null>(null);
+  const [profile, setProfile] = useState<{id: string, name: string, avatar: string} | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -28,8 +28,8 @@ function App() {
     if (saved) setProfile(JSON.parse(saved));
   }, []);
 
-  const handleProfileSelect = (name: string, avatar: string) => {
-    const newProfile = { name, avatar };
+  const handleProfileSelect = (id: string, name: string, avatar: string) => {
+    const newProfile = { id, name, avatar };
     setProfile(newProfile);
     localStorage.setItem('gaton_active_profile', JSON.stringify(newProfile));
   };

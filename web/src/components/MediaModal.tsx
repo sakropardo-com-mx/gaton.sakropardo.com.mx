@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 
-export function MediaModal({ id, onClose }: { id: number; onClose: () => void }) {
+export function MediaModal({ id, profileId, onClose }: { id: number; profileId: string; onClose: () => void }) {
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isWatched, setIsWatched] = useState(false);
@@ -19,33 +19,57 @@ export function MediaModal({ id, onClose }: { id: number; onClose: () => void })
   }, []);
 
   useEffect(() => {
-    const watchedState = localStorage.getItem(`watched_${id}`);
-    if (watchedState) setIsWatched(JSON.parse(watchedState));
-    
-    const savedRating = localStorage.getItem(`rating_${id}`);
-    if (savedRating) setRating(parseInt(savedRating, 10));
-
-    async function fetchDetails() {
-      const { data } = await supabase.from('all').select('*').eq('id', id).single();
-      if (data) {
-        setItem(data);
-        // Simulate trailer auto-play delay
+    async function fetchDetailsAndInteractions() {
+      // Fetch media details
+      const { data: mediaData } = await supabase.from('all').select('*').eq('id', id).single();
+      if (mediaData) {
+        setItem(mediaData);
         setTimeout(() => setShowVideo(true), 1500);
       }
+
+      // Fetch user interaction
+      if (profileId) {
+        const { data: interactionData } = await supabase
+          .from('interactions')
+          .select('*')
+          .eq('profile_id', profileId)
+          .eq('media_id', id)
+          .single();
+          
+        if (interactionData) {
+          setIsWatched(interactionData.is_in_list || false);
+          setRating(interactionData.rating || 0);
+        }
+      }
+
       setLoading(false);
     }
-    fetchDetails();
-  }, [id]);
+    fetchDetailsAndInteractions();
+  }, [id, profileId]);
 
-  const toggleWatched = () => {
+  const toggleWatched = async () => {
     const newState = !isWatched;
     setIsWatched(newState);
-    localStorage.setItem(`watched_${id}`, JSON.stringify(newState));
+    
+    await supabase.from('interactions').upsert({
+      profile_id: profileId,
+      media_id: id,
+      is_in_list: newState,
+      rating: rating,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'profile_id, media_id' });
   };
 
-  const handleRate = (stars: number) => {
+  const handleRate = async (stars: number) => {
     setRating(stars);
-    localStorage.setItem(`rating_${id}`, stars.toString());
+    
+    await supabase.from('interactions').upsert({
+      profile_id: profileId,
+      media_id: id,
+      is_in_list: isWatched,
+      rating: stars,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'profile_id, media_id' });
   };
 
   if (loading) return (
