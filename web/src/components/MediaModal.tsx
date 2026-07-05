@@ -189,6 +189,14 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                   {item.links.map((link: string, index: number) => {
                     const isSeason = link.toLowerCase().includes('temporada');
                     const isSeen = episodeProgress[index];
+                    
+                    // Intentar extraer el número real del capítulo desde la URL
+                    let displayNumber: string | number = index + 1;
+                    const match = link.match(/(?:_|-|\.|episodio|cap|capitulo)\s*0*(\d+)(?:\.rar|\.zip|\.mp4|\.mkv|\.avi|\/|$)/i);
+                    if (match && match[1] && parseInt(match[1]) > index) {
+                      displayNumber = match[1];
+                    }
+
                     return (
                     <div key={index} className="flex gap-2 items-center group">
                       <button 
@@ -205,10 +213,10 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                         className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200`}
                       >
                         <div className="flex items-center gap-4">
-                          <span className="text-2xl font-light text-gray-500 group-hover:text-white transition-colors">{index + 1}</span>
+                          <span className="text-2xl font-light text-gray-500 group-hover:text-white transition-colors min-w-[2rem] text-center">{displayNumber}</span>
                           <div>
                             <p className="font-bold text-white text-sm">
-                              {isSeason ? `Temporada o Pack ${index + 1}` : `Episodio / Parte ${index + 1}`}
+                              {isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio / Parte ${displayNumber}`}
                             </p>
                             <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
                           </div>
