@@ -17,6 +17,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamMetadata, setStreamMetadata] = useState<{number: string | number, isSeason: boolean, episodeName: string} | null>(null);
   const [tmdbEpisodes, setTmdbEpisodes] = useState<any[]>([]);
+  const [serverCache, setServerCache] = useState<Record<string, string>>({});
   const pollingInterval = useRef<any>(null);
 
   useEffect(() => {
@@ -63,6 +64,22 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
           }
         };
         fetchTMDBData(mediaData.title);
+        
+        // Check which links are already cached on the server
+        if (mediaData.links && mediaData.links.length > 0) {
+          fetch('/api/check_cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: mediaData.links })
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (data.cached_urls) {
+              setServerCache(data.cached_urls);
+            }
+          })
+          .catch(err => console.error("Cache check error:", err));
+        }
       }
 
       // Fetch user interaction
@@ -98,6 +115,11 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
             if (data.progress !== undefined) setStreamProgress(data.progress);
             if (data.video_path) setStreamVideoPath(data.video_path);
             if (data.message) setStreamError(data.message);
+            
+            // If job succeeds, clear interval immediately
+            if (data.status === 'ready' || data.status === 'error') {
+              clearInterval(pollingInterval.current);
+            }
           }
         } catch (e) {
           console.error("Polling error", e);
@@ -128,7 +150,14 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
       });
       if (!res.ok) throw new Error("Error al iniciar stream");
       const data = await res.json();
-      setStreamJobId(data.job_id);
+      
+      if (data.status === 'ready') {
+        setStreamStatus('ready');
+        setStreamVideoPath(data.video_path || serverCache[url]);
+        setStreamJobId(data.job_id);
+      } else {
+        setStreamJobId(data.job_id);
+      }
     } catch (e: any) {
       setStreamStatus('error');
       setStreamError(e.message);
@@ -353,6 +382,8 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                     
                     const tmdbEpisode = tmdbEpisodes.find(e => e.episode_number == displayNumber);
                     const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio / Parte ${displayNumber}`);
+                    
+                    const isCached = !!serverCache[link];
 
                     return (
                     <div key={index} className="flex gap-2 items-center group">
@@ -372,7 +403,15 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                           <div>
                             <p className="font-bold text-white text-sm flex items-center gap-2">
                               {episodeName}
-                              <span className="bg-[#E50914] text-xs px-2 py-0.5 rounded text-white font-bold ml-2">▶ Play</span>
+                              {isCached ? (
+                                <span className="bg-green-600 text-xs px-2 py-0.5 rounded text-white font-bold ml-2 flex items-center gap-1">
+                                  ⚡ Listo
+                                </span>
+                              ) : (
+                                <span className="bg-[#E50914] text-xs px-2 py-0.5 rounded text-white font-bold ml-2">
+                                  ▶ Play
+                                </span>
+                              )}
                             </p>
                             <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
                           </div>

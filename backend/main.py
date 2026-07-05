@@ -5,6 +5,7 @@ import subprocess
 import requests
 from bs4 import BeautifulSoup
 import uuid
+import hashlib
 
 app = FastAPI(title="Gaton Streamer API")
 
@@ -126,6 +127,29 @@ def process_download(job_id: str, mediafire_url: str, password: str):
         JOBS[job_id] = {"status": "error", "message": str(e)}
 
 
+def get_job_id(url: str) -> str:
+    return hashlib.md5(url.encode()).hexdigest()
+
+def check_local_cache(job_id: str) -> dict:
+    if job_id in JOBS and JOBS[job_id].get("status") == "ready":
+        return JOBS[job_id]
+        
+    extract_dir = os.path.join(DOWNLOAD_DIR, job_id)
+    if os.path.exists(extract_dir):
+        for root, dirs, files in os.walk(extract_dir):
+            for file in files:
+                if file.endswith("_web.mp4"):
+                    final_video = os.path.join(root, file)
+                    relative_path = os.path.relpath(final_video, DOWNLOAD_DIR)
+                    job_data = {
+                        "status": "ready",
+                        "video_path": f"/streams/{relative_path}",
+                        "local_path": final_video
+                    }
+                    JOBS[job_id] = job_data
+                    return job_data
+    return None
+
 @app.post("/api/prepare")
 async def prepare_stream(payload: dict, background_tasks: BackgroundTasks):
     url = payload.get("url")
@@ -134,10 +158,31 @@ async def prepare_stream(payload: dict, background_tasks: BackgroundTasks):
     if not url:
         raise HTTPException(status_code=400, detail="Falta URL")
         
-    job_id = str(uuid.uuid4())
+    job_id = get_job_id(url)
+    
+    # Check if already processed
+    cached_job = check_local_cache(job_id)
+    if cached_job:
+        return {"job_id": job_id, "status": "ready"}
+        
+    # Prevent starting multiple parallel downloads for the same job
+    if job_id in JOBS and JOBS[job_id].get("status") not in ["error", "ready"]:
+        return {"job_id": job_id, "status": "started"}
+        
     background_tasks.add_task(process_download, job_id, url, password)
     
     return {"job_id": job_id, "status": "started"}
+
+@app.post("/api/check_cache")
+async def check_cache(payload: dict):
+    urls = payload.get("urls", [])
+    result = {}
+    for url in urls:
+        job_id = get_job_id(url)
+        cached_job = check_local_cache(job_id)
+        if cached_job:
+            result[url] = cached_job["video_path"]
+    return {"cached_urls": result}
 
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str):
