@@ -11,7 +11,11 @@ export function MediaModal({ id, onClose }: { id: number; onClose: () => void })
   useEffect(() => {
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = 'unset'; };
+    document.documentElement.style.overflow = 'hidden';
+    return () => { 
+      document.body.style.overflow = 'unset'; 
+      document.documentElement.style.overflow = 'unset';
+    };
   }, []);
 
   useEffect(() => {
@@ -52,7 +56,7 @@ export function MediaModal({ id, onClose }: { id: number; onClose: () => void })
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-center items-start overflow-y-auto bg-black/90 p-4 md:p-10 pt-10 no-scrollbar" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex justify-center items-start overflow-y-auto bg-black/90 p-4 md:p-10 pt-10 no-scrollbar overscroll-contain" onClick={onClose}>
       {/* Modal Container */}
       <div 
         className="relative w-full max-w-4xl bg-[#181818] rounded-xl overflow-hidden shadow-2xl animate-fade-in-up transform-gpu" 
