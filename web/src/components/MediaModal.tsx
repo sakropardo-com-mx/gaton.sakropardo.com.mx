@@ -45,23 +45,23 @@ export function MediaModal({ id, onClose }: { id: number; onClose: () => void })
   };
 
   if (loading) return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
       <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-[#E50914] border-opacity-50"></div>
     </div>
   );
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-center items-start overflow-y-auto bg-black/70 backdrop-blur-sm p-4 md:p-10 pt-10 no-scrollbar" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex justify-center items-start overflow-y-auto bg-black/90 p-4 md:p-10 pt-10 no-scrollbar" onClick={onClose}>
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-4xl bg-[#181818] rounded-xl overflow-hidden shadow-2xl animate-fade-in-up" 
+        className="relative w-full max-w-4xl bg-[#181818] rounded-xl overflow-hidden shadow-2xl animate-fade-in-up transform-gpu" 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 z-50 w-10 h-10 bg-[#181818]/80 hover:bg-white/10 rounded-full flex items-center justify-center text-white text-xl transition-colors backdrop-blur-sm"
+          className="absolute top-4 right-4 z-50 w-10 h-10 bg-[#181818]/90 hover:bg-white/10 rounded-full flex items-center justify-center text-white text-xl transition-colors"
         >
           ✕
         </button>
@@ -73,10 +73,10 @@ export function MediaModal({ id, onClose }: { id: number; onClose: () => void })
                <img 
                  src={item.poster} 
                  alt={item.title} 
-                 className="w-full h-full object-cover scale-125 origin-center animate-ken-burns opacity-60 blur-[2px]" 
+                 className="w-full h-full object-cover scale-110 origin-center animate-ken-burns opacity-40 transform-gpu" 
                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                />
-               <span className="absolute text-sm font-bold tracking-widest uppercase animate-pulse drop-shadow-md text-white/50">Reproduciendo Tráiler...</span>
+               <span className="absolute text-sm font-bold tracking-widest uppercase text-white/50">Reproduciendo Tráiler...</span>
              </div>
           ) : (
             <img 
@@ -208,11 +208,11 @@ export function MediaModal({ id, onClose }: { id: number; onClose: () => void })
         }
 
         @keyframes kenBurns {
-          0% { transform: scale(1.1); }
-          100% { transform: scale(1.3); }
+          0% { transform: scale(1.0); }
+          100% { transform: scale(1.15); }
         }
         .animate-ken-burns {
-          animation: kenBurns 20s ease-in-out infinite alternate;
+          animation: kenBurns 15s ease-out infinite alternate;
         }
       `}</style>
     </div>
