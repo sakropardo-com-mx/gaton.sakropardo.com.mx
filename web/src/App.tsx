@@ -25,7 +25,21 @@ function App() {
 
   useEffect(() => {
     const saved = localStorage.getItem('gaton_active_profile');
-    if (saved) setProfile(JSON.parse(saved));
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Basic UUID validation regex
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (parsed && typeof parsed === 'object' && parsed.id && uuidRegex.test(parsed.id)) {
+          setProfile(parsed);
+        } else {
+          // Invalid or old format (non-uuid), clear it
+          localStorage.removeItem('gaton_active_profile');
+        }
+      } catch (e) {
+        localStorage.removeItem('gaton_active_profile');
+      }
+    }
   }, []);
 
   const handleProfileSelect = (id: string, name: string, avatar: string) => {
