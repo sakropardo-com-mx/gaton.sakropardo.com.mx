@@ -15,7 +15,8 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [streamProgress, setStreamProgress] = useState<number>(0);
   const [streamVideoPath, setStreamVideoPath] = useState<string | null>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
-  const [streamMetadata, setStreamMetadata] = useState<{number: string | number, isSeason: boolean} | null>(null);
+  const [streamMetadata, setStreamMetadata] = useState<{number: string | number, isSeason: boolean, episodeName: string} | null>(null);
+  const [tmdbEpisodes, setTmdbEpisodes] = useState<any[]>([]);
   const pollingInterval = useRef<any>(null);
 
   useEffect(() => {
@@ -35,6 +36,33 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
       if (mediaData) {
         setItem(mediaData);
         setTimeout(() => setShowVideo(true), 1500);
+        
+        // Fetch TMDB Episodes
+        const fetchTMDBData = async (title: string) => {
+          const apiKey = '6880d99ba4f1cb396d71d0e364493702';
+          // Extraer número de temporada (por defecto 1)
+          let seasonNumber = 1;
+          const seasonMatch = title.match(/Temporada\s*(\d+)/i);
+          if (seasonMatch) seasonNumber = parseInt(seasonMatch[1]);
+          
+          const cleanTitle = title.replace(/Temporada\s*\d+/i, '').replace(/\[.*\]/g, '').trim();
+          
+          try {
+            const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&language=es-MX&query=${encodeURIComponent(cleanTitle)}`);
+            const searchData = await searchRes.json();
+            if (searchData.results && searchData.results.length > 0) {
+              const showId = searchData.results[0].id;
+              const seasonRes = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNumber}?api_key=${apiKey}&language=es-MX`);
+              const seasonData = await seasonRes.json();
+              if (seasonData.episodes) {
+                setTmdbEpisodes(seasonData.episodes);
+              }
+            }
+          } catch (e) {
+            console.error("TMDB Error", e);
+          }
+        };
+        fetchTMDBData(mediaData.title);
       }
 
       // Fetch user interaction
@@ -79,13 +107,13 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     return () => clearInterval(pollingInterval.current);
   }, [streamJobId, streamStatus]);
 
-  const startStream = async (url: string, displayNumber: string | number, isSeason: boolean, e: React.MouseEvent) => {
+  const startStream = async (url: string, displayNumber: string | number, isSeason: boolean, episodeName: string, e: React.MouseEvent) => {
     e.preventDefault();
     setStreamError(null);
     setStreamVideoPath(null);
     setStreamProgress(0);
     setStreamStatus('started');
-    setStreamMetadata({ number: displayNumber, isSeason });
+    setStreamMetadata({ number: displayNumber, isSeason, episodeName });
     
     // Clear any previous job
     if (streamJobId) {
@@ -201,7 +229,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                   <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <a 
                       href={streamVideoPath} 
-                      download={streamMetadata ? `${item.title.replace(/[/\\?%*:|"<>]/g, '-')} - ${streamMetadata.isSeason ? 'T1' : ''}E${streamMetadata.number}.mp4` : 'video.mp4'}
+                      download={streamMetadata ? `${item.title.replace(/[/\\?%*:|"<>]/g, '-')} - E${streamMetadata.number} ${streamMetadata.episodeName}.mp4` : 'video.mp4'}
                       className="bg-[#E50914] text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition flex items-center gap-2 text-sm shadow-lg"
                     >
                       ⬇ Descargar a PC
@@ -322,6 +350,9 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                     if (match && match[1] && parseInt(match[1]) > index) {
                       displayNumber = match[1];
                     }
+                    
+                    const tmdbEpisode = tmdbEpisodes.find(e => e.episode_number == displayNumber);
+                    const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio / Parte ${displayNumber}`);
 
                     return (
                     <div key={index} className="flex gap-2 items-center group">
@@ -333,14 +364,14 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                         ✓
                       </button>
                       <button 
-                        onClick={(e) => startStream(link, displayNumber, isSeason, e)}
+                        onClick={(e) => startStream(link, displayNumber, isSeason, episodeName, e)}
                         className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200 text-left`}
                       >
                         <div className="flex items-center gap-4">
                           <span className="text-2xl font-light text-gray-500 group-hover:text-white transition-colors min-w-[2rem] text-center">{displayNumber}</span>
                           <div>
                             <p className="font-bold text-white text-sm flex items-center gap-2">
-                              {isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio / Parte ${displayNumber}`}
+                              {episodeName}
                               <span className="bg-[#E50914] text-xs px-2 py-0.5 rounded text-white font-bold ml-2">▶ Play</span>
                             </p>
                             <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
