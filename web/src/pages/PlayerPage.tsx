@@ -358,38 +358,40 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
        
        {/* Fullscreen Player UI */}
        <div className="flex-1 flex items-center justify-center relative w-full h-full">
-          {streamStatus === 'ready' && streamVideoPath ? (
-             <div className="w-full h-full relative group plyr-container">
-                <Plyr 
-                  ref={plyrRef} 
-                  source={plyrSource as any} 
-                  options={plyrOptions as any} 
-                />
-             </div>
-          ) : streamStatus === 'error' ? (
-             <div className="text-center text-white">
-                <span className="text-6xl block mb-4">⚠️</span>
-                <h3 className="text-2xl font-bold">Error al procesar el video</h3>
-                <p className="text-gray-400 mt-2">{streamError}</p>
-             </div>
-          ) : (
-             <div className="text-center text-white flex flex-col items-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-[#E50914] border-opacity-50 mb-6"></div>
-                <h2 className="text-2xl font-bold uppercase tracking-widest text-[#E50914]">
-                   {streamStatus === 'started' && 'Conectando al servidor...'}
-                   {streamStatus === 'scraping' && 'Resolviendo enlace seguro...'}
-                   {streamStatus === 'downloading' && 'Acelerando descarga P2P...'}
-                   {streamStatus === 'extracting' && 'Desempaquetando archivo...'}
-                   {streamStatus === 'converting' && 'Sincronizando pistas de audio...'}
-                </h2>
-                {streamStatus === 'downloading' && (
-                  <div className="w-96 h-2 bg-gray-800 rounded-full mt-6 overflow-hidden relative">
-                    <div className="absolute inset-0 bg-[#E50914]/20 animate-pulse"></div>
-                    <div className="h-full bg-[#E50914] transition-all duration-300 relative z-10" style={{ width: `${streamProgress}%` }}></div>
-                  </div>
-                )}
-             </div>
-          )}
+          <div key={streamVideoPath || 'loading-state'} className="w-full h-full flex items-center justify-center">
+            {streamStatus === 'ready' && streamVideoPath ? (
+               <div className="w-full h-full relative group plyr-container">
+                  <Plyr 
+                    ref={plyrRef} 
+                    source={plyrSource as any} 
+                    options={plyrOptions as any} 
+                  />
+               </div>
+            ) : streamStatus === 'error' ? (
+               <div className="text-center text-white">
+                  <span className="text-6xl block mb-4">⚠️</span>
+                  <h3 className="text-2xl font-bold">Error al procesar el video</h3>
+                  <p className="text-gray-400 mt-2">{streamError}</p>
+               </div>
+            ) : (
+               <div className="text-center text-white flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-[#E50914] border-opacity-50 mb-6"></div>
+                  <h2 className="text-2xl font-bold uppercase tracking-widest text-[#E50914]">
+                     {streamStatus === 'started' && 'Conectando al servidor...'}
+                     {streamStatus === 'scraping' && 'Resolviendo enlace seguro...'}
+                     {streamStatus === 'downloading' && 'Acelerando descarga P2P...'}
+                     {streamStatus === 'extracting' && 'Desempaquetando archivo...'}
+                     {streamStatus === 'converting' && 'Sincronizando pistas de audio...'}
+                  </h2>
+                  {streamStatus === 'downloading' && (
+                    <div className="w-96 h-2 bg-gray-800 rounded-full mt-6 overflow-hidden relative">
+                      <div className="absolute inset-0 bg-[#E50914]/20 animate-pulse"></div>
+                      <div className="h-full bg-[#E50914] transition-all duration-300 relative z-10" style={{ width: `${streamProgress}%` }}></div>
+                    </div>
+                  )}
+               </div>
+            )}
+          </div>
        </div>
        <style>{`
          .plyr-container .plyr {
