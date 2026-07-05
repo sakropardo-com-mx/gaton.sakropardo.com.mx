@@ -56,7 +56,7 @@ jobs:
             docker run -d \
               --name gaton-streamer \
               --restart unless-stopped \
-              -p 127.0.0.1:8001:8000 \
+              -p 8001:8000 \
               -v /opt/jadenn-stack/web/public/sakropardo-com-mx/gaton.sakropardo.com.mx/streams:/downloads \
               gaton-streamer-backend
           EOF
