@@ -15,6 +15,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [streamProgress, setStreamProgress] = useState<number>(0);
   const [streamVideoPath, setStreamVideoPath] = useState<string | null>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [streamMetadata, setStreamMetadata] = useState<{number: string | number, isSeason: boolean} | null>(null);
   const pollingInterval = useRef<any>(null);
 
   useEffect(() => {
@@ -78,12 +79,13 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     return () => clearInterval(pollingInterval.current);
   }, [streamJobId, streamStatus]);
 
-  const startStream = async (url: string, e: React.MouseEvent) => {
+  const startStream = async (url: string, displayNumber: string | number, isSeason: boolean, e: React.MouseEvent) => {
     e.preventDefault();
     setStreamError(null);
     setStreamVideoPath(null);
     setStreamProgress(0);
     setStreamStatus('started');
+    setStreamMetadata({ number: displayNumber, isSeason });
     
     // Clear any previous job
     if (streamJobId) {
@@ -199,7 +201,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                   <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <a 
                       href={streamVideoPath} 
-                      download 
+                      download={streamMetadata ? `${item.title.replace(/[/\\?%*:|"<>]/g, '-')} - ${streamMetadata.isSeason ? 'T1' : ''}E${streamMetadata.number}.mp4` : 'video.mp4'}
                       className="bg-[#E50914] text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition flex items-center gap-2 text-sm shadow-lg"
                     >
                       ⬇ Descargar a PC
@@ -331,7 +333,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                         ✓
                       </button>
                       <button 
-                        onClick={(e) => startStream(link, e)}
+                        onClick={(e) => startStream(link, displayNumber, isSeason, e)}
                         className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200 text-left`}
                       >
                         <div className="flex items-center gap-4">
