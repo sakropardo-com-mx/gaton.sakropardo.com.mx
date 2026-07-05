@@ -238,7 +238,11 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
           ) : searchResults.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {searchResults.map(item => (
-                <Link to={`/media/${item.id}`} key={item.id} className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] group relative transition-transform hover:scale-105 hover:z-10">
+                <div 
+                  key={item.id} 
+                  className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] group relative transition-transform hover:scale-105 hover:z-10 cursor-pointer"
+                  onClick={() => navigate(`/media/${item.id}`)}
+                >
                   <img 
                     src={item.poster} 
                     alt={item.title} 
@@ -248,7 +252,7 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                     <p className="text-white font-bold text-sm leading-tight line-clamp-2">{item.title}</p>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           ) : (
@@ -265,11 +269,15 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
           ) : (
             <>
               {/* HERO BANNER */}
-              {featured && (
+              {(activeCategory !== 'Mi lista') && featured && (
                 <div className="relative h-[70vh] md:h-[85vh] w-full mb-8 bg-black">
                   <div className="absolute inset-0">
                     <img 
-                      src={featured.poster || 'https://via.placeholder.com/1920x1080?text=Banner'} 
+                      src={
+                        activeCategory === 'Series' && series.length > 0 ? series[0].poster :
+                        activeCategory === 'Películas' && movies.length > 0 ? movies[0].poster :
+                        featured.poster || 'https://via.placeholder.com/1920x1080?text=Banner'
+                      } 
                       alt={featured.title}
                       className="w-full h-full object-cover opacity-70"
                       onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/1920x1080?text=Banner'; }}
@@ -281,29 +289,35 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
                   
                   <div className="absolute bottom-[10%] md:bottom-[20%] left-4 md:left-12 max-w-2xl z-10">
                     <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-lg leading-tight line-clamp-2">
-                      {featured.title}
+                      {
+                        activeCategory === 'Series' && series.length > 0 ? series[0].title :
+                        activeCategory === 'Películas' && movies.length > 0 ? movies[0].title :
+                        featured.title
+                      }
                     </h1>
                     
                     <div className="flex items-center gap-4 text-sm md:text-base font-semibold text-gray-300 mb-6 drop-shadow">
                       <span className="text-green-500 font-bold">Nuevo</span>
-                      <span>{featured.date}</span>
                       <span className="border border-gray-500 px-1 text-xs">HD</span>
-                      <span>{featured.duration}</span>
                     </div>
 
                     <p className="text-gray-200 text-sm md:text-lg mb-8 line-clamp-3 md:line-clamp-4 drop-shadow-md">
-                      {featured.sinopsis || "Descubre esta increíble obra disponible ahora mismo en el catálogo."}
+                      {
+                        activeCategory === 'Series' && series.length > 0 ? series[0].sinopsis :
+                        activeCategory === 'Películas' && movies.length > 0 ? movies[0].sinopsis :
+                        featured.sinopsis || "Descubre esta increíble obra disponible ahora mismo en el catálogo."
+                      }
                     </p>
 
                     <div className="flex gap-4">
                       <button 
-                        onClick={() => navigate(`/media/${featured.id}`)}
+                        onClick={() => navigate(`/media/${activeCategory === 'Series' ? series[0].id : activeCategory === 'Películas' ? movies[0].id : featured.id}`)}
                         className="px-6 md:px-8 py-2 md:py-3 bg-white text-black font-bold rounded-md hover:bg-white/80 transition flex items-center gap-2 text-lg"
                       >
                         <span className="text-2xl">▶</span> Reproducir
                       </button>
                       <button 
-                        onClick={() => navigate(`/media/${featured.id}`)}
+                        onClick={() => navigate(`/media/${activeCategory === 'Series' ? series[0].id : activeCategory === 'Películas' ? movies[0].id : featured.id}`)}
                         className="px-6 md:px-8 py-2 md:py-3 bg-gray-500/50 text-white font-bold rounded-md hover:bg-gray-500/70 transition flex items-center gap-2 text-lg backdrop-blur-sm"
                       >
                         <span className="text-xl">ℹ</span> Más información
@@ -324,19 +338,26 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
                 )}
 
                 {activeCategory === 'Inicio' && (
-                  <CarouselRow title="Las 10 películas más populares en México hoy" items={recents.slice(0, 10)} isTop10={true} />
-                )}
-                
-                {(activeCategory === 'Inicio' || activeCategory === 'Series' || activeCategory === 'Películas') && (
-                  <CarouselRow title="Agregados Recientemente" items={recents} />
+                  <>
+                    <CarouselRow title="Las 10 películas más populares en México hoy" items={recents.slice(0, 10)} isTop10={true} />
+                    <CarouselRow title="Agregados Recientemente" items={recents} />
+                    <CarouselRow title="Películas Destacadas" items={movies} />
+                    <CarouselRow title="Maratón de Series" items={series} />
+                  </>
                 )}
 
-                {(activeCategory === 'Inicio' || activeCategory === 'Películas') && (
-                  <CarouselRow title="Películas Destacadas" items={movies} />
+                {activeCategory === 'Películas' && (
+                  <>
+                    <CarouselRow title="Películas Destacadas" items={movies} />
+                    <CarouselRow title="Agregadas Recientemente" items={recents.filter(r => !r.title.toLowerCase().includes('temporada') && !r.title.toLowerCase().includes('serie'))} />
+                  </>
                 )}
                 
-                {(activeCategory === 'Inicio' || activeCategory === 'Series') && (
-                  <CarouselRow title="Maratón de Series" items={series} />
+                {activeCategory === 'Series' && (
+                  <>
+                    <CarouselRow title="Series Populares" items={series} />
+                    <CarouselRow title="Episodios y Temporadas Recientes" items={recents.filter(r => r.title.toLowerCase().includes('temporada') || r.title.toLowerCase().includes('serie'))} />
+                  </>
                 )}
               </div>
             </>
