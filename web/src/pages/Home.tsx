@@ -199,15 +199,18 @@ export function Home({ activeProfile, category = 'Inicio' }: { activeProfile: { 
             {items.map((item, index) => (
               <div 
                 key={item.id} 
-                className={`shrink-0 flex items-center snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 cursor-pointer origin-center ${isTop10 ? 'pl-12 md:pl-20' : ''}`}
+                className={`shrink-0 snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 cursor-pointer origin-center ${isTop10 ? 'w-[160px] md:w-[240px] h-[160px] md:h-[220px] flex items-end justify-end' : 'flex items-center'}`}
                 onClick={() => navigate(`${basePath}/media/${item.id}`)}
               >
                 {isTop10 && (
-                  <span className="absolute left-0 bottom-[-10px] md:bottom-[-20px] text-[140px] md:text-[240px] font-black tracking-tighter text-black outline-text leading-[0.8] z-0 select-none drop-shadow-2xl">
+                  <span 
+                    className="absolute left-[-10px] bottom-[-25px] md:bottom-[-35px] text-[150px] md:text-[250px] font-black tracking-tighter text-black outline-text leading-none z-0 select-none drop-shadow-lg"
+                    style={{ fontFamily: 'Impact, "Arial Black", sans-serif', WebkitTextStroke: '4px #595959' }}
+                  >
                     {index + 1}
                   </span>
                 )}
-                <div className={`rounded-md overflow-hidden bg-slate-900 shadow-lg aspect-[2/3] ${isTop10 ? 'w-[120px] md:w-[160px] lg:w-[180px]' : 'w-[140px] md:w-[220px] lg:w-[260px]'} relative z-10`}>
+                <div className={`rounded-md overflow-hidden bg-slate-900 shadow-xl relative z-10 ${isTop10 ? 'w-[100px] md:w-[150px] aspect-[2/3]' : 'w-[140px] md:w-[220px] lg:w-[260px] aspect-[2/3]'}`}>
                   <img 
                     src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
                     alt={item.title} 
@@ -593,8 +596,7 @@ export function Home({ activeProfile, category = 'Inicio' }: { activeProfile: { 
           scrollbar-width: none;  /* Firefox */
         }
         .outline-text {
-          -webkit-text-stroke: 4px #595959;
-          text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+          text-shadow: 0px 0px 15px rgba(0,0,0,0.8);
         }
         body { background-color: #141414; }
       `}</style>
