@@ -33,10 +33,14 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
   const [showEpisodesList, setShowEpisodesList] = useState(false);
   const [autoplayNext, setAutoplayNext] = useState(true);
 
+  // Background downloads queue
+  const [downloadQueue, setDownloadQueue] = useState<Record<number, { job_id: string, progress: number, status: string }>>({});
+  const [localCache, setLocalCache] = useState<Record<number, boolean>>({});
+
   const pollingInterval = useRef<any>(null);
   const plyrRef = useRef<any>(null);
 
-  // 1. Fetch initial progress
+  // 1. Fetch initial progress and init cache
   useEffect(() => {
     const fetchProgress = async () => {
       const { data } = await supabase.from('interactions').select('episode_progress').eq('profile_id', profileId).eq('media_id', id).maybeSingle();
@@ -47,6 +51,16 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     fetchProgress();
   }, [id, profileId]);
 
+  useEffect(() => {
+    if (allEpisodes) {
+      const initialCache: Record<number, boolean> = {};
+      allEpisodes.forEach((ep: any) => {
+        if (ep.isCached) initialCache[ep.index] = true;
+      });
+      setLocalCache(initialCache);
+    }
+  }, [allEpisodes]);
+
   // 2. Start stream on mount or link change
   useEffect(() => {
     setStreamJobId(null);
@@ -55,9 +69,11 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     setStreamProgress(0);
 
     const start = async () => {
+      // If it's cached from previous page, just start it.
       if (cachedUrl) {
         setStreamStatus('ready');
         setStreamVideoPath(cachedUrl);
+        setLocalCache(prev => ({...prev, [index]: true}));
         return;
       }
 
@@ -74,6 +90,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
         if (data.status === 'ready') {
           setStreamStatus('ready');
           setStreamVideoPath(data.video_path);
+          setLocalCache(prev => ({...prev, [index]: true}));
         } else {
           setStreamJobId(data.job_id);
         }
@@ -83,9 +100,9 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
       }
     };
     start();
-  }, [link, password, cachedUrl]);
+  }, [link, password, cachedUrl, index]);
 
-  // 3. Poll status
+  // 3. Poll status for current stream
   useEffect(() => {
     if (streamJobId && streamStatus !== 'ready' && streamStatus !== 'error') {
       pollingInterval.current = setInterval(async () => {
@@ -97,6 +114,9 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
             if (data.progress) setStreamProgress(data.progress);
             if (data.video_path) setStreamVideoPath(data.video_path);
             if (data.message) setStreamError(data.message);
+            if (data.status === 'ready') {
+              setLocalCache(prev => ({...prev, [index]: true}));
+            }
             if (data.status === 'ready' || data.status === 'error') clearInterval(pollingInterval.current);
           }
         } catch (e) {
@@ -105,7 +125,57 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
       }, 2000);
     }
     return () => clearInterval(pollingInterval.current);
-  }, [streamJobId, streamStatus]);
+  }, [streamJobId, streamStatus, index]);
+
+  // Background queue polling
+  useEffect(() => {
+    const activeJobs = Object.entries(downloadQueue).filter(([_, job]) => job.status !== 'ready' && job.status !== 'error');
+    if (activeJobs.length > 0) {
+      const interval = setInterval(() => {
+        activeJobs.forEach(async ([epIndexStr, job]) => {
+          const epIndex = parseInt(epIndexStr);
+          try {
+            const res = await fetch(`/api/status/${job.job_id}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.status === 'ready') {
+                setLocalCache(prev => ({ ...prev, [epIndex]: true }));
+                setDownloadQueue(prev => { const q = {...prev}; delete q[epIndex]; return q; });
+              } else if (data.status === 'error') {
+                setDownloadQueue(prev => { const q = {...prev}; delete q[epIndex]; return q; });
+              } else {
+                setDownloadQueue(prev => ({ ...prev, [epIndex]: { ...prev[epIndex], status: data.status, progress: data.progress || 0 } }));
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [downloadQueue]);
+
+  const startBackgroundDownload = async (ep: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch('/api/prepare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: ep.link, password: password || '' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'ready') {
+          setLocalCache(prev => ({ ...prev, [ep.index]: true }));
+        } else if (data.job_id) {
+          setDownloadQueue(prev => ({ ...prev, [ep.index]: { job_id: data.job_id, status: data.status, progress: 0 } }));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // 4. Plyr sync and Autoplay
   useEffect(() => {
@@ -165,7 +235,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
         link: ep.link,
         index: ep.index,
         episodeName: ep.episodeName,
-        cachedUrl: ep.cachedUrl
+        cachedUrl: localCache[ep.index] ? (ep.cachedUrl || null) : null
       }
     });
     setShowEpisodesList(false);
@@ -188,7 +258,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
 
        {/* Episodes Sidebar */}
        {showEpisodesList && (
-         <div className="absolute top-0 right-0 bottom-0 w-80 md:w-96 bg-[#181818]/95 backdrop-blur-md z-[60] shadow-2xl flex flex-col animate-slide-in-right">
+         <div className="absolute top-0 right-0 bottom-0 w-80 md:w-[450px] bg-[#181818]/95 backdrop-blur-md z-[60] shadow-2xl flex flex-col animate-slide-in-right">
            <div className="p-6 flex justify-between items-center border-b border-gray-700">
              <h3 className="text-white text-xl font-bold">Episodios</h3>
              <button onClick={() => setShowEpisodesList(false)} className="text-gray-400 hover:text-white text-2xl font-bold">✕</button>
@@ -208,6 +278,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                const currentProgs = episodeProgressRef.current;
                const epProg = typeof currentProgs[ep.index] === 'object' ? currentProgs[ep.index] : { seen: !!currentProgs[ep.index] };
                const isSeen = epProg.seen;
+               const isCachedLocally = localCache[ep.index];
+               const dlJob = downloadQueue[ep.index];
 
                return (
                  <div 
@@ -220,10 +292,24 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                      <p className={`font-bold text-sm flex items-center gap-2 ${isCurrent ? 'text-white' : 'text-gray-200'}`}>
                        {ep.episodeName}
                      </p>
-                     <div className="flex gap-2 mt-1">
-                       {ep.isCached && !isCurrent && <span className="bg-green-600/30 text-green-400 text-[10px] px-1.5 py-0.5 rounded font-bold">⚡ Listo</span>}
+                     <div className="flex gap-2 mt-2 items-center flex-wrap">
+                       {isCachedLocally && !isCurrent && <span className="bg-green-600/30 text-green-400 text-[10px] px-1.5 py-0.5 rounded font-bold">⚡ Listo</span>}
                        {isSeen && !isCurrent && <span className="bg-blue-600/30 text-blue-400 text-[10px] px-1.5 py-0.5 rounded font-bold">✓ Visto</span>}
                        {isCurrent && <span className="text-[#E50914] text-xs font-bold">Reproduciendo</span>}
+
+                       {!isCurrent && !isCachedLocally && !dlJob && (
+                          <button onClick={(e) => startBackgroundDownload(ep, e)} className="bg-gray-700 hover:bg-gray-600 text-white text-[10px] px-2 py-1 rounded font-bold ml-auto transition-colors shadow-lg">
+                            ⬇ Descargar al Servidor
+                          </button>
+                       )}
+                       {!isCurrent && !isCachedLocally && dlJob && (
+                          <div className="ml-auto flex items-center gap-2 bg-black/40 px-2 py-1 rounded">
+                            <span className="text-gray-300 text-[10px] font-bold">{dlJob.progress}%</span>
+                            <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                               <div className="h-full bg-[#E50914] transition-all duration-300" style={{ width: `${dlJob.progress}%` }}></div>
+                            </div>
+                          </div>
+                       )}
                      </div>
                    </div>
                  </div>
