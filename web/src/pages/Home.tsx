@@ -29,6 +29,8 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
   const [exploreItems, setExploreItems] = useState<MediaItem[]>([]);
   const [explorePage, setExplorePage] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [exploreSort, setExploreSort] = useState<'desc' | 'asc'>('desc');
+  const [exploreYear, setExploreYear] = useState<string>('Todos');
 
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
@@ -102,25 +104,41 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
 
   // Load Explore Catalog
   useEffect(() => {
-    if (activeCategory === 'Explorar' && exploreItems.length === 0) {
-      loadMoreExplore();
+    if (activeCategory === 'Explorar') {
+      // Reset when category is clicked or filters change
+      loadMoreExplore(true);
     }
-  }, [activeCategory]);
+  }, [activeCategory, exploreSort, exploreYear]);
 
-  const loadMoreExplore = async () => {
+  const loadMoreExplore = async (reset = false) => {
+    if (loadingMore) return;
     setLoadingMore(true);
-    const start = explorePage * 48;
+    
+    const targetPage = reset ? 0 : explorePage;
+    const start = targetPage * 48;
     const end = start + 47;
     
-    const { data } = await supabase
+    let query = supabase
       .from('all')
       .select('id, title, poster, date, duration, sinopsis')
-      .order('id', { ascending: false })
+      .order('id', { ascending: exploreSort === 'asc' })
       .range(start, end);
       
+    if (exploreYear !== 'Todos') {
+      // Usamos elike para buscar el año en cualquier parte de la cadena (ej. "10 de Mayo de 2024" o "2024")
+      query = query.ilike('date', `%${exploreYear}%`);
+    }
+      
+    const { data } = await query;
+      
     if (data) {
-      setExploreItems(prev => [...prev, ...data as MediaItem[]]);
-      setExplorePage(prev => prev + 1);
+      if (reset) {
+        setExploreItems(data as MediaItem[]);
+        setExplorePage(1);
+      } else {
+        setExploreItems(prev => [...prev, ...data as MediaItem[]]);
+        setExplorePage(prev => prev + 1);
+      }
     }
     setLoadingMore(false);
   };
@@ -396,7 +414,32 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
           {/* EXPLORE GRID UI */}
           {!loading && activeCategory === 'Explorar' && !activeSearch && (
             <div className="pt-32 px-4 md:px-12 max-w-[100rem] mx-auto pb-20">
-              <h2 className="text-3xl font-bold text-white mb-8">Catálogo Completo</h2>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <h2 className="text-3xl font-bold text-white">Catálogo Completo</h2>
+                
+                {/* Netflix-style Filter Controls */}
+                <div className="flex gap-4">
+                  <select 
+                    className="bg-black text-white border border-gray-600 rounded-sm px-4 py-2 text-sm focus:outline-none focus:border-white transition-colors"
+                    value={exploreYear}
+                    onChange={(e) => setExploreYear(e.target.value)}
+                  >
+                    <option value="Todos">Año de Estreno</option>
+                    {['2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016'].map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+
+                  <select 
+                    className="bg-black text-white border border-gray-600 rounded-sm px-4 py-2 text-sm focus:outline-none focus:border-white transition-colors"
+                    value={exploreSort}
+                    onChange={(e) => setExploreSort(e.target.value as 'desc' | 'asc')}
+                  >
+                    <option value="desc">Más recientes primero</option>
+                    <option value="asc">Más antiguos primero</option>
+                  </select>
+                </div>
+              </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {exploreItems.map(item => (
@@ -419,13 +462,17 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
               </div>
               
               <div className="mt-12 flex justify-center">
-                <button 
-                  onClick={loadMoreExplore}
-                  disabled={loadingMore}
-                  className="px-8 py-3 bg-transparent border-2 border-gray-600 text-white font-bold rounded hover:bg-gray-800 hover:border-white transition-all"
-                >
-                  {loadingMore ? 'Cargando...' : 'Cargar más títulos'}
-                </button>
+                {exploreItems.length === 0 && !loadingMore ? (
+                  <p className="text-gray-500 text-lg">No se encontraron resultados para esos filtros.</p>
+                ) : (
+                  <button 
+                    onClick={() => loadMoreExplore(false)}
+                    disabled={loadingMore}
+                    className="px-8 py-3 bg-transparent border-2 border-gray-600 text-white font-bold rounded hover:bg-gray-800 hover:border-white transition-all"
+                  >
+                    {loadingMore ? 'Cargando...' : 'Cargar más títulos'}
+                  </button>
+                )}
               </div>
             </div>
           )}
