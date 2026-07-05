@@ -12,7 +12,7 @@ interface MediaItem {
   sinopsis: string;
 }
 
-export function Home({ activeProfile }: { activeProfile: { id: string, name: string, avatar: string } }) {
+export function Home({ activeProfile, category = 'Inicio' }: { activeProfile: { id: string, name: string, avatar: string }, category?: string }) {
   const { modalId } = useParams();
   const navigate = useNavigate();
   
@@ -34,7 +34,22 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
 
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('Inicio');
+  const [activeCategory, setActiveCategory] = useState(category);
+
+  useEffect(() => {
+    setActiveCategory(category);
+    setSearchInput('');
+    setActiveSearch('');
+  }, [category]);
+
+  const getBasePath = (cat: string) => {
+    if (cat === 'Series') return '/series';
+    if (cat === 'Películas') return '/peliculas';
+    if (cat === 'Explorar') return '/explorar';
+    if (cat === 'Mi lista') return '/lista';
+    return '';
+  };
+  const basePath = getBasePath(activeCategory);
 
   // Handle scroll for sticky navbar
   useEffect(() => {
@@ -185,7 +200,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
               <div 
                 key={item.id} 
                 className={`shrink-0 flex items-center snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 cursor-pointer origin-center ${isTop10 ? 'pl-12 md:pl-20' : ''}`}
-                onClick={() => navigate(`/media/${item.id}`)}
+                onClick={() => navigate(`${basePath}/media/${item.id}`)}
               >
                 {isTop10 && (
                   <span className="absolute left-0 bottom-[-10px] md:bottom-[-20px] text-[140px] md:text-[240px] font-black tracking-tighter text-black outline-text leading-[0.8] z-0 select-none drop-shadow-2xl">
@@ -232,14 +247,14 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
       <header className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? 'bg-[#141414] shadow-lg' : 'bg-gradient-to-b from-black/80 to-transparent'}`}>
         <div className="flex flex-col md:flex-row justify-between items-center px-4 md:px-12 py-4 gap-4">
           <div className="flex items-center gap-8">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-[#E50914] tracking-wider drop-shadow-md cursor-pointer" onClick={() => { setSearchInput(''); setActiveCategory('Inicio'); }}>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-[#E50914] tracking-wider drop-shadow-md cursor-pointer" onClick={() => { navigate('/'); setSearchInput(''); setActiveCategory('Inicio'); }}>
               GATON
             </h1>
             <nav className="hidden lg:flex gap-5 text-sm text-gray-300">
               {['Inicio', 'Series', 'Películas', 'Explorar', 'Mi lista'].map(cat => (
                 <button 
                   key={cat}
-                  onClick={() => { setActiveCategory(cat); setSearchInput(''); setActiveSearch(''); }}
+                  onClick={() => { navigate(getBasePath(cat)); setSearchInput(''); setActiveSearch(''); }}
                   className={`${activeCategory === cat ? 'font-bold text-white' : 'hover:text-gray-300'} transition-colors`}
                 >
                   {cat}
@@ -280,7 +295,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
                             className="flex items-center gap-4 p-2 hover:bg-[#2a2a2a] rounded-md cursor-pointer transition-colors group"
                             onClick={() => {
                               setSearchInput('');
-                              navigate(`/media/${item.id}`);
+                              navigate(`${basePath}/media/${item.id}`);
                             }}
                           >
                             <img src={item.poster} alt={item.title} className="w-12 h-16 object-cover rounded shadow" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/120x160?text=No+Poster'; }} />
@@ -362,7 +377,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
                 <div 
                   key={item.id} 
                   className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] group relative transition-transform hover:scale-105 hover:z-10 cursor-pointer"
-                  onClick={() => navigate(`/media/${item.id}`)}
+                  onClick={() => navigate(`${basePath}/media/${item.id}`)}
                 >
                   <img 
                     src={item.poster} 
@@ -432,13 +447,13 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
 
                     <div className="flex gap-4">
                       <button 
-                        onClick={() => navigate(`/media/${activeCategory === 'Series' ? series[0].id : activeCategory === 'Películas' ? movies[0].id : featured.id}`)}
+                        onClick={() => navigate(`${basePath}/media/${activeCategory === 'Series' ? series[0].id : activeCategory === 'Películas' ? movies[0].id : featured.id}`)}
                         className="px-6 md:px-8 py-2 md:py-3 bg-white text-black font-bold rounded-md hover:bg-white/80 transition flex items-center gap-2 text-lg"
                       >
                         <span className="text-2xl">▶</span> Reproducir
                       </button>
                       <button 
-                        onClick={() => navigate(`/media/${activeCategory === 'Series' ? series[0].id : activeCategory === 'Películas' ? movies[0].id : featured.id}`)}
+                        onClick={() => navigate(`${basePath}/media/${activeCategory === 'Series' ? series[0].id : activeCategory === 'Películas' ? movies[0].id : featured.id}`)}
                         className="px-6 md:px-8 py-2 md:py-3 bg-gray-500/50 text-white font-bold rounded-md hover:bg-gray-500/70 transition flex items-center gap-2 text-lg backdrop-blur-sm"
                       >
                         <span className="text-xl">ℹ</span> Más información
@@ -530,7 +545,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
                   <div 
                     key={item.id} 
                     className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] group relative transition-transform hover:scale-105 hover:z-10 cursor-pointer"
-                    onClick={() => navigate(`/media/${item.id}`)}
+                    onClick={() => navigate(`${basePath}/media/${item.id}`)}
                   >
                     <img 
                       src={item.poster} 
@@ -564,7 +579,7 @@ export function Home({ activeProfile }: { activeProfile: { id: string, name: str
       )}
 
       {/* Media Modal */}
-      {modalId && <MediaModal id={parseInt(modalId, 10)} profileId={activeProfile.id} onClose={() => navigate('/')} />}
+      {modalId && <MediaModal id={parseInt(modalId, 10)} profileId={activeProfile.id} onClose={() => navigate(basePath || '/')} />}
 
       {/* Tailwind Custom Scrollbar for Netflix rows */}
       <style>{`

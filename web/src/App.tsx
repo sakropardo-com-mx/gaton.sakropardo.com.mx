@@ -62,8 +62,18 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home activeProfile={profile} />} />
-        <Route path="/media/:modalId" element={<Home activeProfile={profile} />} />
+        <Route path="/" element={<Home activeProfile={profile} category="Inicio" />} />
+        <Route path="/series" element={<Home activeProfile={profile} category="Series" />} />
+        <Route path="/peliculas" element={<Home activeProfile={profile} category="Películas" />} />
+        <Route path="/explorar" element={<Home activeProfile={profile} category="Explorar" />} />
+        <Route path="/lista" element={<Home activeProfile={profile} category="Mi lista" />} />
+        
+        <Route path="/media/:modalId" element={<Home activeProfile={profile} category="Inicio" />} />
+        <Route path="/series/media/:modalId" element={<Home activeProfile={profile} category="Series" />} />
+        <Route path="/peliculas/media/:modalId" element={<Home activeProfile={profile} category="Películas" />} />
+        <Route path="/explorar/media/:modalId" element={<Home activeProfile={profile} category="Explorar" />} />
+        <Route path="/lista/media/:modalId" element={<Home activeProfile={profile} category="Mi lista" />} />
+        
         <Route path="/play/:id" element={<PlayerPage activeProfile={profile} />} />
       </Routes>
     </Router>
