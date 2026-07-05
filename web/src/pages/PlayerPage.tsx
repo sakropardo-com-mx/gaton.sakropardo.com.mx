@@ -182,6 +182,25 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
              </div>
           )}
        </div>
+       <style>{`
+         .plyr-container .plyr {
+           height: 100%;
+           width: 100%;
+         }
+         .plyr-container .plyr__video-wrapper {
+           height: 100%;
+           width: 100%;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           background: black;
+         }
+         .plyr-container video {
+           height: 100% !important;
+           width: 100% !important;
+           object-fit: contain;
+         }
+       `}</style>
     </div>
   );
 }
