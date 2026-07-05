@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabase';
 
 export function MediaModal({ id, profileId, onClose }: { id: number; profileId: string; onClose: () => void }) {
@@ -8,6 +8,14 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [rating, setRating] = useState<number>(0);
   const [episodeProgress, setEpisodeProgress] = useState<Record<string, boolean>>({});
   const [showVideo, setShowVideo] = useState(false);
+
+  // Streaming State
+  const [streamJobId, setStreamJobId] = useState<string | null>(null);
+  const [streamStatus, setStreamStatus] = useState<'idle' | 'started' | 'scraping' | 'downloading' | 'extracting' | 'ready' | 'error'>('idle');
+  const [streamProgress, setStreamProgress] = useState<number>(0);
+  const [streamVideoPath, setStreamVideoPath] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const pollingInterval = useRef<any>(null);
 
   useEffect(() => {
     // Prevent body scroll when modal is open
@@ -48,6 +56,63 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     }
     fetchDetailsAndInteractions();
   }, [id, profileId]);
+
+  // Polling for stream status
+  useEffect(() => {
+    if (streamJobId && !['ready', 'error', 'idle'].includes(streamStatus)) {
+      pollingInterval.current = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/status/${streamJobId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setStreamStatus(data.status);
+            if (data.progress !== undefined) setStreamProgress(data.progress);
+            if (data.video_path) setStreamVideoPath(data.video_path);
+            if (data.message) setStreamError(data.message);
+          }
+        } catch (e) {
+          console.error("Polling error", e);
+        }
+      }, 2000);
+    }
+    return () => clearInterval(pollingInterval.current);
+  }, [streamJobId, streamStatus]);
+
+  const startStream = async (url: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setStreamError(null);
+    setStreamVideoPath(null);
+    setStreamProgress(0);
+    setStreamStatus('started');
+    
+    // Clear any previous job
+    if (streamJobId) {
+      await fetch(`/api/clean/${streamJobId}`, { method: 'DELETE' }).catch(() => {});
+    }
+    
+    try {
+      const res = await fetch('/api/prepare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, password: item?.contrasena || '' })
+      });
+      if (!res.ok) throw new Error("Error al iniciar stream");
+      const data = await res.json();
+      setStreamJobId(data.job_id);
+    } catch (e: any) {
+      setStreamStatus('error');
+      setStreamError(e.message);
+    }
+  };
+
+  const cleanStream = async () => {
+    if (streamJobId) {
+      await fetch(`/api/clean/${streamJobId}`, { method: 'DELETE' }).catch(() => {});
+      setStreamJobId(null);
+      setStreamStatus('idle');
+      setStreamVideoPath(null);
+    }
+  };
 
   const toggleWatched = async () => {
     const newState = !isWatched;
@@ -119,53 +184,108 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
         </button>
 
         {/* Hero Video/Poster Section */}
-        <div className="relative w-full h-[50vh] md:h-[60vh] bg-black">
-          {showVideo ? (
-             <div className="absolute inset-0 bg-black flex items-center justify-center text-gray-500 overflow-hidden">
-               <img 
-                 src={item.poster} 
-                 alt={item.title} 
-                 className="w-full h-full object-cover scale-110 origin-center animate-ken-burns opacity-40 transform-gpu" 
-                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
-               />
-               <span className="absolute text-sm font-bold tracking-widest uppercase text-white/50">Reproduciendo Tráiler...</span>
-             </div>
-          ) : (
-            <img 
-              src={item.poster || 'https://via.placeholder.com/1920x1080?text=No+Poster'} 
-              alt={item.title}
-              className="w-full h-full object-cover opacity-80"
-              onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/1920x1080?text=No+Poster'; }}
-            />
-          )}
-
-          <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/40 to-transparent"></div>
+        <div className="relative w-full h-[50vh] md:h-[60vh] bg-black overflow-hidden flex flex-col justify-center items-center">
           
-          <div className="absolute bottom-6 left-10 right-10">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 drop-shadow-lg leading-tight w-3/4">
-              {item.title}
-            </h1>
-            <div className="flex items-center gap-3">
-              <button className="px-8 py-2 md:py-3 bg-white text-black font-bold rounded-md hover:bg-white/80 transition flex items-center gap-2 text-lg">
-                <span className="text-xl">▶</span> Reproducir
-              </button>
-              <button 
-                onClick={toggleWatched}
-                className="w-10 h-10 md:w-12 md:h-12 border-2 border-gray-400 hover:border-white rounded-full flex items-center justify-center text-white text-xl hover:bg-white/10 transition group relative"
-              >
-                {isWatched ? '✓' : '+'}
-                <span className="absolute -top-10 bg-white text-black text-xs font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
-                  {isWatched ? 'Quitar de Mi lista' : 'Agregar a Mi lista'}
-                </span>
-              </button>
-              <button className="w-10 h-10 md:w-12 md:h-12 border-2 border-gray-400 hover:border-white rounded-full flex items-center justify-center text-white text-xl hover:bg-white/10 transition relative group">
-                👍
-                <span className="absolute -top-10 bg-white text-black text-xs font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
-                  Calificar
-                </span>
-              </button>
+          {streamStatus !== 'idle' ? (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-black relative z-10">
+              {streamStatus === 'ready' && streamVideoPath ? (
+                <div className="w-full h-full relative group">
+                  <video 
+                    src={streamVideoPath} 
+                    controls 
+                    autoPlay 
+                    className="w-full h-full bg-black outline-none"
+                  />
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <a 
+                      href={streamVideoPath} 
+                      download 
+                      className="bg-[#E50914] text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition flex items-center gap-2 text-sm shadow-lg"
+                    >
+                      ⬇ Descargar a PC
+                    </a>
+                    <button 
+                      onClick={cleanStream}
+                      className="bg-gray-800 text-white px-4 py-2 rounded font-bold hover:bg-gray-700 transition flex items-center gap-2 text-sm border border-gray-600 shadow-lg"
+                    >
+                      🗑 Limpiar Servidor
+                    </button>
+                  </div>
+                </div>
+              ) : streamStatus === 'error' ? (
+                <div className="text-center text-white">
+                  <span className="text-4xl mb-4 block">⚠️</span>
+                  <h3 className="text-xl font-bold mb-2">Error al preparar el video</h3>
+                  <p className="text-gray-400">{streamError}</p>
+                  <button onClick={() => setStreamStatus('idle')} className="mt-4 px-6 py-2 bg-gray-800 rounded text-white hover:bg-gray-700">Volver</button>
+                </div>
+              ) : (
+                <div className="text-center text-white flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-[#E50914] border-opacity-50 mb-4"></div>
+                  <h3 className="text-xl font-bold uppercase tracking-widest text-[#E50914]">
+                    {streamStatus === 'started' && 'Iniciando...'}
+                    {streamStatus === 'scraping' && 'Obteniendo enlace...'}
+                    {streamStatus === 'downloading' && 'Descargando al servidor...'}
+                    {streamStatus === 'extracting' && 'Extrayendo video...'}
+                  </h3>
+                  {streamStatus === 'downloading' && (
+                    <div className="w-64 h-2 bg-gray-800 rounded-full mt-4 overflow-hidden">
+                      <div className="h-full bg-[#E50914] transition-all duration-300" style={{ width: `${streamProgress}%` }}></div>
+                    </div>
+                  )}
+                  {streamStatus === 'downloading' && <p className="text-sm mt-2 text-gray-400">{streamProgress}%</p>}
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <>
+              {showVideo ? (
+                 <div className="absolute inset-0 bg-black flex items-center justify-center text-gray-500 overflow-hidden">
+                   <img 
+                     src={item.poster} 
+                     alt={item.title} 
+                     className="w-full h-full object-cover scale-110 origin-center animate-ken-burns opacity-40 transform-gpu" 
+                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                   />
+                 </div>
+              ) : (
+                <img 
+                  src={item.poster || 'https://via.placeholder.com/1920x1080?text=No+Poster'} 
+                  alt={item.title}
+                  className="w-full h-full object-cover opacity-80"
+                  onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/1920x1080?text=No+Poster'; }}
+                />
+              )}
+
+              <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/40 to-transparent pointer-events-none"></div>
+              
+              <div className="absolute bottom-6 left-10 right-10">
+                <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 drop-shadow-lg leading-tight w-3/4">
+                  {item.title}
+                </h1>
+                <div className="flex items-center gap-3">
+                  <button className="px-8 py-2 md:py-3 bg-white text-black font-bold rounded-md hover:bg-white/80 transition flex items-center gap-2 text-lg">
+                    <span className="text-xl">▶</span> Ver Detalles
+                  </button>
+                  <button 
+                    onClick={toggleWatched}
+                    className="w-10 h-10 md:w-12 md:h-12 border-2 border-gray-400 hover:border-white rounded-full flex items-center justify-center text-white text-xl hover:bg-white/10 transition group relative"
+                  >
+                    {isWatched ? '✓' : '+'}
+                    <span className="absolute -top-10 bg-white text-black text-xs font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                      {isWatched ? 'Quitar de Mi lista' : 'Agregar a Mi lista'}
+                    </span>
+                  </button>
+                  <button className="w-10 h-10 md:w-12 md:h-12 border-2 border-gray-400 hover:border-white rounded-full flex items-center justify-center text-white text-xl hover:bg-white/10 transition relative group">
+                    👍
+                    <span className="absolute -top-10 bg-white text-black text-xs font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                      Calificar
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Content Section */}
@@ -209,23 +329,21 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                       >
                         ✓
                       </button>
-                      <a 
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200`}
+                      <button 
+                        onClick={(e) => startStream(link, e)}
+                        className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200 text-left`}
                       >
                         <div className="flex items-center gap-4">
                           <span className="text-2xl font-light text-gray-500 group-hover:text-white transition-colors min-w-[2rem] text-center">{displayNumber}</span>
                           <div>
-                            <p className="font-bold text-white text-sm">
+                            <p className="font-bold text-white text-sm flex items-center gap-2">
                               {isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio / Parte ${displayNumber}`}
+                              <span className="bg-[#E50914] text-xs px-2 py-0.5 rounded text-white font-bold ml-2">▶ Play</span>
                             </p>
                             <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
                           </div>
                         </div>
-                        <span className="text-gray-400 group-hover:text-white transition-colors">⬇</span>
-                      </a>
+                      </button>
                     </div>
                   )})}
                 </div>
