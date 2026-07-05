@@ -53,14 +53,15 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     const newState = !isWatched;
     setIsWatched(newState);
     
-    await supabase.from('interactions').upsert({
+    const { error } = await supabase.from('interactions').upsert({
       profile_id: profileId,
       media_id: id,
       is_in_list: newState,
       rating: rating,
       episode_progress: episodeProgress,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'interactions_pkey' });
+    }, { onConflict: 'profile_id,media_id' });
+    if (error) console.error("Error toggling watched:", error);
   };
 
   const toggleEpisode = async (index: number, e: React.MouseEvent) => {
@@ -70,27 +71,29 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     const newProgress = { ...episodeProgress, [index]: !episodeProgress[index] };
     setEpisodeProgress(newProgress);
 
-    await supabase.from('interactions').upsert({
+    const { error } = await supabase.from('interactions').upsert({
       profile_id: profileId,
       media_id: id,
       is_in_list: isWatched,
       rating: rating,
       episode_progress: newProgress,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'interactions_pkey' });
+    }, { onConflict: 'profile_id,media_id' });
+    if (error) console.error("Error toggling episode:", error);
   };
 
   const handleRate = async (stars: number) => {
     setRating(stars);
     
-    await supabase.from('interactions').upsert({
+    const { error } = await supabase.from('interactions').upsert({
       profile_id: profileId,
       media_id: id,
       is_in_list: isWatched,
       rating: stars,
       episode_progress: episodeProgress,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'interactions_pkey' });
+    }, { onConflict: 'profile_id,media_id' });
+    if (error) console.error("Error rating:", error);
   };
 
   if (loading) return (
