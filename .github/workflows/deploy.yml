@@ -14,6 +14,11 @@ jobs:
       - name: 📥 Checkout del código
         uses: actions/checkout@v4
 
+      - name: 🔐 Generar archivo .env
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > ./web/.env
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> ./web/.env
+
       - name: 🔑 Configurar Llave SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
