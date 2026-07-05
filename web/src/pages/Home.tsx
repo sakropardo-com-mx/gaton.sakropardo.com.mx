@@ -11,178 +11,231 @@ interface MediaItem {
   sinopsis: string;
 }
 
-const PAGE_SIZE = 48;
-
 export function Home() {
-  const [data, setData] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [featured, setFeatured] = useState<MediaItem | null>(null);
+  const [recents, setRecents] = useState<MediaItem[]>([]);
+  const [movies, setMovies] = useState<MediaItem[]>([]);
+  const [series, setSeries] = useState<MediaItem[]>([]);
   
+  const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
-  
-  const [category, setCategory] = useState('Todos'); // 'Todos', 'Peliculas', 'Series'
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const fetchItems = async (isNewSearch = false) => {
-    setLoading(true);
-    const currentPage = isNewSearch ? 0 : page;
-    
-    let query = supabase
-      .from('all')
-      .select('id, title, poster, date, duration, sinopsis')
-      .order('id', { ascending: false });
-
-    // Category filter heuristic (since it's all in one table)
-    if (category === 'Peliculas') {
-      query = query.not('title', 'ilike', '%temporada%').not('title', 'ilike', '%serie%');
-    } else if (category === 'Series') {
-      query = query.or('title.ilike.%temporada%,title.ilike.%serie%');
-    }
-
-    if (activeSearch) {
-      query = query.ilike('title', `%${activeSearch}%`);
-    }
-
-    const from = currentPage * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    query = query.range(from, to);
-
-    const { data: records, error } = await query;
-
-    if (error) {
-      console.error('Error fetching data:', error);
-    } else {
-      if (isNewSearch) {
-        setData(records as MediaItem[]);
-      } else {
-        setData(prev => [...prev, ...(records as MediaItem[])]);
-      }
+  // Initial Data Load (Hero + Rows)
+  useEffect(() => {
+    async function loadNetflixUI() {
+      setLoading(true);
       
-      if (records && records.length < PAGE_SIZE) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
+      // 1. Fetch Latest 20 (Recents & Featured)
+      const { data: recentData } = await supabase
+        .from('all')
+        .select('id, title, poster, date, duration, sinopsis')
+        .order('id', { ascending: false })
+        .limit(20);
+        
+      if (recentData && recentData.length > 0) {
+        setFeatured(recentData[0] as MediaItem);
+        setRecents(recentData.slice(1) as MediaItem[]);
       }
+
+      // 2. Fetch Movies
+      const { data: movieData } = await supabase
+        .from('all')
+        .select('id, title, poster, date, duration, sinopsis')
+        .not('title', 'ilike', '%temporada%')
+        .not('title', 'ilike', '%serie%')
+        .order('id', { ascending: false })
+        .range(20, 40);
+        
+      if (movieData) setMovies(movieData as MediaItem[]);
+
+      // 3. Fetch Series
+      const { data: serieData } = await supabase
+        .from('all')
+        .select('id, title, poster, date, duration, sinopsis')
+        .or('title.ilike.%temporada%,title.ilike.%serie%')
+        .order('id', { ascending: false })
+        .limit(20);
+
+      if (serieData) setSeries(serieData as MediaItem[]);
+
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchItems(true);
-  }, [activeSearch, category]);
-
-  useEffect(() => {
-    if (page > 0) {
-      fetchItems(false);
+    
+    if (!activeSearch) {
+      loadNetflixUI();
     }
-  }, [page]);
+  }, [activeSearch]);
 
-  // Real-time debounce effect
+  // Real-time debounce effect for Search
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       setActiveSearch(searchInput);
-      setPage(0);
-    }, 400); // 400ms debounce
+      if (searchInput.trim() !== '') {
+        setLoading(true);
+        const { data } = await supabase
+          .from('all')
+          .select('id, title, poster, date, duration, sinopsis')
+          .ilike('title', `%${searchInput}%`)
+          .order('id', { ascending: false })
+          .limit(48);
+        setSearchResults((data as MediaItem[]) || []);
+        setLoading(false);
+      }
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  return (
-    <div className="min-h-screen p-8 max-w-[90rem] mx-auto font-sans">
-      <header className="mb-10 text-center">
-        <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 mb-4 drop-shadow-sm">
-          Gaton Play Series
-        </h1>
-        <p className="text-gray-400 text-lg">Descubre y descarga tus películas y series favoritas.</p>
-      </header>
-
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700/50 backdrop-blur-sm">
-        <div className="w-full md:w-1/2 flex relative">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            🔍
-          </span>
-          <input
-            type="text"
-            placeholder="Escribe para buscar en tiempo real en toda la base de datos..."
-            className="flex-grow pl-10 pr-4 py-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all shadow-inner w-full"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-        </div>
-        
-        <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
-          {['Todos', 'Peliculas', 'Series'].map(cat => (
-            <button
-              key={cat}
-              onClick={() => {
-                setCategory(cat);
-                setPage(0);
-              }}
-              className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                category === cat 
-                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {data.map((item) => (
-          <Link to={`/media/${item.id}`} key={item.id} className="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700/50 hover:shadow-xl hover:border-purple-500/50 transition-all duration-300 group flex flex-col">
-            <div className="relative h-64 overflow-hidden bg-slate-900">
+  // Reusable Carousel Component
+  const CarouselRow = ({ title, items }: { title: string, items: MediaItem[] }) => (
+    <div className="mb-10 pl-4 md:pl-12">
+      <h2 className="text-xl md:text-2xl font-bold text-white mb-4 drop-shadow-md">{title}</h2>
+      <div className="flex gap-4 overflow-x-auto pb-6 pt-2 pr-12 custom-scrollbar scroll-smooth snap-x snap-mandatory">
+        {items.map(item => (
+          <Link 
+            to={`/media/${item.id}`} 
+            key={item.id} 
+            className="shrink-0 w-36 md:w-48 lg:w-56 snap-start group relative transition-transform duration-300 hover:scale-105 hover:z-10"
+          >
+            <div className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] border border-transparent group-hover:border-slate-500 transition-colors">
               <img 
                 src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
                 alt={item.title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-90"></div>
-              <div className="absolute bottom-3 left-3 right-3">
-                <h2 className="text-base font-bold text-white leading-tight drop-shadow-md line-clamp-2">{item.title}</h2>
-                <p className="text-xs text-gray-300 mt-1 truncate">{item.date} • {item.duration}</p>
-              </div>
-            </div>
-            <div className="p-3 flex-grow flex flex-col">
-              <p className="text-gray-400 text-xs line-clamp-2 mb-3 flex-grow">
-                {item.sinopsis || "Sin sinopsis disponible."}
-              </p>
-              <div className="mt-auto pt-2 border-t border-slate-700/50 text-center">
-                <span className="text-purple-400 text-sm font-semibold group-hover:text-purple-300 transition-colors">
-                  Descargar &rarr;
-                </span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
+                <p className="text-white font-bold text-sm leading-tight line-clamp-2">{item.title}</p>
+                <p className="text-gray-300 text-xs mt-1">{item.date}</p>
               </div>
             </div>
           </Link>
         ))}
       </div>
+    </div>
+  );
 
-      {loading && (
-        <div className="text-center py-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
-          <p className="mt-4 text-gray-400">Cargando...</p>
+  return (
+    <div className="min-h-screen bg-[#141414] font-sans pb-10">
+      {/* Absolute Header Overlay */}
+      <header className="absolute top-0 w-full z-50 p-4 md:px-12 md:py-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-b from-black/80 to-transparent">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-red-600 tracking-wider uppercase drop-shadow-md cursor-pointer" onClick={() => setSearchInput('')}>
+          Gaton Play
+        </h1>
+        
+        <div className="w-full md:w-96 relative">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            🔍
+          </span>
+          <input
+            type="text"
+            placeholder="Títulos, personas, géneros..."
+            className="w-full pl-10 pr-4 py-2 rounded-full bg-black/60 border border-gray-600 text-white text-sm focus:outline-none focus:border-white focus:bg-black/80 transition-all backdrop-blur-md"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
         </div>
+      </header>
+
+      {/* SEARCH RESULTS GRID */}
+      {activeSearch ? (
+        <div className="pt-32 px-4 md:px-12 max-w-[100rem] mx-auto">
+          <h2 className="text-2xl text-gray-400 mb-6">Resultados para: <span className="text-white font-bold">{activeSearch}</span></h2>
+          
+          {loading ? (
+            <div className="text-center py-20 text-white">Buscando...</div>
+          ) : searchResults.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {searchResults.map(item => (
+                <Link to={`/media/${item.id}`} key={item.id} className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] group relative transition-transform hover:scale-105 hover:z-10">
+                  <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                    <p className="text-white font-bold text-sm leading-tight line-clamp-2">{item.title}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 text-gray-500 text-lg">No se encontraron resultados.</div>
+          )}
+        </div>
+      ) : (
+        /* NETFLIX UI LAYOUT */
+        <>
+          {loading && !featured ? (
+            <div className="h-screen flex items-center justify-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-red-600 border-opacity-50"></div>
+            </div>
+          ) : (
+            <>
+              {/* HERO BANNER */}
+              {featured && (
+                <div className="relative h-[70vh] md:h-[85vh] w-full mb-8 bg-black">
+                  <div className="absolute inset-0">
+                    <img 
+                      src={featured.poster || 'https://via.placeholder.com/1920x1080?text=Banner'} 
+                      alt={featured.title}
+                      className="w-full h-full object-cover opacity-70"
+                    />
+                    {/* Dark Gradients for Netflix effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent"></div>
+                  </div>
+                  
+                  <div className="absolute bottom-[10%] md:bottom-[20%] left-4 md:left-12 max-w-2xl z-10">
+                    <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-lg leading-tight line-clamp-2">
+                      {featured.title}
+                    </h1>
+                    
+                    <div className="flex items-center gap-4 text-sm md:text-base font-semibold text-gray-300 mb-6 drop-shadow">
+                      <span className="text-green-500 font-bold">Nuevo</span>
+                      <span>{featured.date}</span>
+                      <span className="border border-gray-500 px-1 text-xs">HD</span>
+                      <span>{featured.duration}</span>
+                    </div>
+
+                    <p className="text-gray-200 text-sm md:text-lg mb-8 line-clamp-3 md:line-clamp-4 drop-shadow-md">
+                      {featured.sinopsis || "Descubre esta increíble obra disponible ahora mismo en el catálogo."}
+                    </p>
+
+                    <div className="flex gap-4">
+                      <Link 
+                        to={`/media/${featured.id}`}
+                        className="px-6 md:px-8 py-2 md:py-3 bg-white text-black font-bold rounded-md hover:bg-white/80 transition flex items-center gap-2 text-lg"
+                      >
+                        <span className="text-2xl">▶</span> Reproducir / Descargar
+                      </Link>
+                      <Link 
+                        to={`/media/${featured.id}`}
+                        className="px-6 md:px-8 py-2 md:py-3 bg-gray-500/50 text-white font-bold rounded-md hover:bg-gray-500/70 transition flex items-center gap-2 text-lg backdrop-blur-sm"
+                      >
+                        <span className="text-xl">ℹ</span> Más información
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CAROUSELS */}
+              <div className="relative z-20 -mt-10 md:-mt-20">
+                <CarouselRow title="Agregados Recientemente" items={recents} />
+                <CarouselRow title="Películas Destacadas" items={movies} />
+                <CarouselRow title="Maratón de Series" items={series} />
+              </div>
+            </>
+          )}
+        </>
       )}
 
-      {!loading && data.length === 0 && (
-        <div className="text-center py-20 text-gray-500 text-lg bg-slate-800/50 rounded-xl">
-          No se encontraron resultados.
-        </div>
-      )}
-
-      {!loading && hasMore && data.length > 0 && (
-        <div className="text-center mt-12">
-          <button 
-            onClick={() => setPage(p => p + 1)}
-            className="px-8 py-3 bg-slate-800 border border-slate-600 hover:bg-slate-700 hover:border-purple-500 rounded-full font-bold text-white shadow-lg transition-all"
-          >
-            Cargar Más Películas y Series
-          </button>
-        </div>
-      )}
+      {/* Tailwind Custom Scrollbar for Netflix rows */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+        body { background-color: #141414; }
+      `}</style>
     </div>
   );
 }
