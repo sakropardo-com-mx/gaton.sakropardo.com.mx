@@ -27,6 +27,7 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
   const [activeSearch, setActiveSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('Inicio');
 
   // Handle scroll for sticky navbar
   useEffect(() => {
@@ -184,15 +185,19 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
       <header className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? 'bg-[#141414] shadow-lg' : 'bg-gradient-to-b from-black/80 to-transparent'}`}>
         <div className="flex flex-col md:flex-row justify-between items-center px-4 md:px-12 py-4 gap-4">
           <div className="flex items-center gap-8">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-[#E50914] tracking-wider drop-shadow-md cursor-pointer" onClick={() => setSearchInput('')}>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-[#E50914] tracking-wider drop-shadow-md cursor-pointer" onClick={() => { setSearchInput(''); setActiveCategory('Inicio'); }}>
               GATON
             </h1>
             <nav className="hidden lg:flex gap-5 text-sm text-gray-300">
-              <a href="#" className="font-bold text-white hover:text-gray-300 transition-colors">Inicio</a>
-              <a href="#" className="hover:text-gray-300 transition-colors">Series</a>
-              <a href="#" className="hover:text-gray-300 transition-colors">Películas</a>
-              <a href="#" className="hover:text-gray-300 transition-colors">Novedades populares</a>
-              <a href="#" className="hover:text-gray-300 transition-colors">Mi lista</a>
+              {['Inicio', 'Series', 'Películas', 'Mi lista'].map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`${activeCategory === cat ? 'font-bold text-white' : 'hover:text-gray-300'} transition-colors`}
+                >
+                  {cat}
+                </button>
+              ))}
             </nav>
           </div>
           
@@ -310,13 +315,29 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
 
               {/* CAROUSELS */}
               <div className="relative z-20 -mt-10 md:-mt-20">
-                {continueWatching.length > 0 && (
+                {(activeCategory === 'Inicio' || activeCategory === 'Mi lista') && continueWatching.length > 0 && (
                   <CarouselRow title={`Seguir viendo para ${activeProfile.name}`} items={continueWatching} showProgress={true} />
                 )}
-                <CarouselRow title="Las 10 películas más populares en México hoy" items={recents.slice(0, 10)} isTop10={true} />
-                <CarouselRow title="Agregados Recientemente" items={recents} />
-                <CarouselRow title="Películas Destacadas" items={movies} />
-                <CarouselRow title="Maratón de Series" items={series} />
+                
+                {activeCategory === 'Mi lista' && continueWatching.length === 0 && (
+                  <div className="text-center py-20 text-gray-400">Aún no tienes elementos en tu lista.</div>
+                )}
+
+                {activeCategory === 'Inicio' && (
+                  <CarouselRow title="Las 10 películas más populares en México hoy" items={recents.slice(0, 10)} isTop10={true} />
+                )}
+                
+                {(activeCategory === 'Inicio' || activeCategory === 'Series' || activeCategory === 'Películas') && (
+                  <CarouselRow title="Agregados Recientemente" items={recents} />
+                )}
+
+                {(activeCategory === 'Inicio' || activeCategory === 'Películas') && (
+                  <CarouselRow title="Películas Destacadas" items={movies} />
+                )}
+                
+                {(activeCategory === 'Inicio' || activeCategory === 'Series') && (
+                  <CarouselRow title="Maratón de Series" items={series} />
+                )}
               </div>
             </>
           )}
