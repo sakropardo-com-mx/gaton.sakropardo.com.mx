@@ -25,6 +25,11 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
   const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
+  
+  const [exploreItems, setExploreItems] = useState<MediaItem[]>([]);
+  const [explorePage, setExplorePage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Inicio');
@@ -90,10 +95,35 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
       setLoading(false);
     }
     
-    if (!activeSearch) {
+    if (!activeSearch && activeCategory !== 'Explorar') {
       loadNetflixUI();
     }
-  }, [activeSearch]);
+  }, [activeSearch, activeCategory]);
+
+  // Load Explore Catalog
+  useEffect(() => {
+    if (activeCategory === 'Explorar' && exploreItems.length === 0) {
+      loadMoreExplore();
+    }
+  }, [activeCategory]);
+
+  const loadMoreExplore = async () => {
+    setLoadingMore(true);
+    const start = explorePage * 48;
+    const end = start + 47;
+    
+    const { data } = await supabase
+      .from('all')
+      .select('id, title, poster, date, duration, sinopsis')
+      .order('id', { ascending: false })
+      .range(start, end);
+      
+    if (data) {
+      setExploreItems(prev => [...prev, ...data as MediaItem[]]);
+      setExplorePage(prev => prev + 1);
+    }
+    setLoadingMore(false);
+  };
 
   // Real-time debounce effect for Search
   useEffect(() => {
@@ -189,10 +219,10 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
               GATON
             </h1>
             <nav className="hidden lg:flex gap-5 text-sm text-gray-300">
-              {['Inicio', 'Series', 'Películas', 'Mi lista'].map(cat => (
+              {['Inicio', 'Series', 'Películas', 'Explorar', 'Mi lista'].map(cat => (
                 <button 
                   key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  onClick={() => { setActiveCategory(cat); setSearchInput(''); setActiveSearch(''); }}
                   className={`${activeCategory === cat ? 'font-bold text-white' : 'hover:text-gray-300'} transition-colors`}
                 >
                   {cat}
@@ -361,6 +391,43 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
                 )}
               </div>
             </>
+          )}
+
+          {/* EXPLORE GRID UI */}
+          {!loading && activeCategory === 'Explorar' && !activeSearch && (
+            <div className="pt-32 px-4 md:px-12 max-w-[100rem] mx-auto pb-20">
+              <h2 className="text-3xl font-bold text-white mb-8">Catálogo Completo</h2>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {exploreItems.map(item => (
+                  <div 
+                    key={item.id} 
+                    className="rounded-md overflow-hidden bg-slate-800 shadow-lg aspect-[2/3] group relative transition-transform hover:scale-105 hover:z-10 cursor-pointer"
+                    onClick={() => navigate(`/media/${item.id}`)}
+                  >
+                    <img 
+                      src={item.poster} 
+                      alt={item.title} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                      <p className="text-white font-bold text-sm leading-tight line-clamp-2">{item.title}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-12 flex justify-center">
+                <button 
+                  onClick={loadMoreExplore}
+                  disabled={loadingMore}
+                  className="px-8 py-3 bg-transparent border-2 border-gray-600 text-white font-bold rounded hover:bg-gray-800 hover:border-white transition-all"
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más títulos'}
+                </button>
+              </div>
+            </div>
           )}
         </>
       )}
