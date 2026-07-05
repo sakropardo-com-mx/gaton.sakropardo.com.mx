@@ -1,41 +1,59 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 
 const DEFAULT_AVATARS = [
   "https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png",
-  "https://wallpapers.com/images/hd/netflix-profile-pictures-1000-x-1000-vnl1thqhqcgvq4ru.jpg",
-  "https://wallpapers.com/images/hd/netflix-profile-pictures-1000-x-1000-qo9h82134t9nv0j0.jpg",
-  "https://wallpapers.com/images/hd/netflix-profile-pictures-1000-x-1000-88wkdmjrorckekha.jpg",
-  "https://wallpapers.com/images/hd/netflix-profile-pictures-5yup5hd2i60x7ew3.jpg"
+  "https://mir-s3-cdn-cf.behance.net/project_modules/disp/366be133850498.56ba69ac36858.png",
+  "https://mir-s3-cdn-cf.behance.net/project_modules/disp/84c20033850498.56ba69ac290ea.png",
+  "https://mir-s3-cdn-cf.behance.net/project_modules/disp/64623a33850498.56ba69ac2a6f7.png",
+  "https://mir-s3-cdn-cf.behance.net/project_modules/disp/1bdc9a33850498.56ba69ac2ba5b.png"
 ];
 
-export function Profiles({ onSelectProfile }: { onSelectProfile: (name: string, avatar: string) => void }) {
+export function Profiles({ onSelectProfile, userId }: { onSelectProfile: (name: string, avatar: string) => void, userId: string }) {
   const [profiles, setProfiles] = useState<{name: string, avatar: string}[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState(DEFAULT_AVATARS[0]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem('gaton_profiles');
-    if (saved) {
-      setProfiles(JSON.parse(saved));
-    } else {
-      const defaults = [
-        { name: "Principal", avatar: DEFAULT_AVATARS[0] },
-        { name: "Invitado", avatar: DEFAULT_AVATARS[2] }
-      ];
-      setProfiles(defaults);
-      localStorage.setItem('gaton_profiles', JSON.stringify(defaults));
+    async function fetchProfiles() {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+        
+      if (data && data.length > 0) {
+        setProfiles(data);
+      } else {
+        // If no profiles, user can create one.
+        setProfiles([]);
+      }
+      setLoading(false);
     }
-  }, []);
+    fetchProfiles();
+  }, [userId]);
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (newName.trim() === "") return;
-    const newProfileList = [...profiles, { name: newName, avatar: selectedAvatar }];
-    setProfiles(newProfileList);
-    localStorage.setItem('gaton_profiles', JSON.stringify(newProfileList));
-    setIsAdding(false);
-    setNewName("");
+    
+    // Save to Supabase
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([
+        { user_id: userId, name: newName, avatar: selectedAvatar }
+      ])
+      .select();
+      
+    if (data && !error) {
+      setProfiles([...profiles, data[0]]);
+      setIsAdding(false);
+      setNewName("");
+    }
   };
+
+  if (loading) return <div className="min-h-screen bg-[#141414] flex items-center justify-center"><div className="animate-spin rounded-full h-16 w-16 border-t-4 border-[#E50914] border-opacity-50"></div></div>;
 
   if (isAdding) {
     return (
@@ -125,8 +143,11 @@ export function Profiles({ onSelectProfile }: { onSelectProfile: (name: string, 
         )}
       </div>
       
-      <button className="mt-20 border border-gray-500 text-gray-400 hover:border-white hover:text-white px-8 py-2 uppercase tracking-widest text-lg transition-colors">
-        Administrar perfiles
+      <button 
+        onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem('netflix_profile'); }}
+        className="mt-20 border border-gray-500 text-gray-400 hover:border-white hover:text-white px-8 py-2 uppercase tracking-widest text-lg transition-colors"
+      >
+        Cerrar sesión
       </button>
 
       <style>{`
