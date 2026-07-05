@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-# Install unrar from official rarlab binaries
-RUN apt-get update && apt-get install -y wget curl && \
+# Install unrar from official rarlab binaries and ffmpeg for audio transcoding
+RUN apt-get update && apt-get install -y wget curl ffmpeg && \
     wget https://www.rarlab.com/rar/rarlinux-x64-700.tar.gz && \
     tar -zxvf rarlinux-x64-700.tar.gz && \
     cp rar/unrar /usr/local/bin/ && \

@@ -11,7 +11,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
 
   // Streaming State
   const [streamJobId, setStreamJobId] = useState<string | null>(null);
-  const [streamStatus, setStreamStatus] = useState<'idle' | 'started' | 'scraping' | 'downloading' | 'extracting' | 'ready' | 'error'>('idle');
+  const [streamStatus, setStreamStatus] = useState<'idle' | 'started' | 'scraping' | 'downloading' | 'extracting' | 'converting' | 'ready' | 'error'>('idle');
   const [streamProgress, setStreamProgress] = useState<number>(0);
   const [streamVideoPath, setStreamVideoPath] = useState<string | null>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
@@ -227,6 +227,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                     {streamStatus === 'scraping' && 'Obteniendo enlace...'}
                     {streamStatus === 'downloading' && 'Descargando al servidor...'}
                     {streamStatus === 'extracting' && 'Extrayendo video...'}
+                    {streamStatus === 'converting' && 'Optimizando audio para web...'}
                   </h3>
                   {streamStatus === 'downloading' && (
                     <div className="w-64 h-2 bg-gray-800 rounded-full mt-4 overflow-hidden">
