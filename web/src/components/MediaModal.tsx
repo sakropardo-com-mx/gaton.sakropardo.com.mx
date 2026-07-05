@@ -35,7 +35,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
           .select('*')
           .eq('profile_id', profileId)
           .eq('media_id', id)
-          .single();
+          .maybeSingle();
           
         if (interactionData) {
           setIsWatched(interactionData.is_in_list || false);
