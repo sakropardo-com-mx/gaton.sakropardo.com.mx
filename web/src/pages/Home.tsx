@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Link } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { MediaModal } from '../components/MediaModal';
 
 interface MediaItem {
   id: number;
@@ -11,11 +12,15 @@ interface MediaItem {
   sinopsis: string;
 }
 
-export function Home() {
+export function Home({ activeProfile }: { activeProfile: { name: string, avatar: string } }) {
+  const { modalId } = useParams();
+  const navigate = useNavigate();
+  
   const [featured, setFeatured] = useState<MediaItem | null>(null);
   const [recents, setRecents] = useState<MediaItem[]>([]);
   const [movies, setMovies] = useState<MediaItem[]>([]);
   const [series, setSeries] = useState<MediaItem[]>([]);
+  const [continueWatching, setContinueWatching] = useState<MediaItem[]>([]);
   
   const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
   const [searchInput, setSearchInput] = useState('');
@@ -66,7 +71,18 @@ export function Home() {
         .order('id', { ascending: false })
         .limit(20);
 
-      if (serieData) setSeries(serieData as MediaItem[]);
+      // 4. Load Continue Watching from localStorage
+      const watchedIds = Object.keys(localStorage)
+        .filter(k => k.startsWith('watched_') && localStorage.getItem(k) === 'true')
+        .map(k => parseInt(k.replace('watched_', '')));
+        
+      if (watchedIds.length > 0) {
+        const { data: watchedData } = await supabase
+          .from('all')
+          .select('id, title, poster, date, duration, sinopsis')
+          .in('id', watchedIds.slice(0, 15));
+        if (watchedData) setContinueWatching(watchedData as MediaItem[]);
+      }
 
       setLoading(false);
     }
@@ -96,7 +112,7 @@ export function Home() {
   }, [searchInput]);
 
   // Reusable Carousel Component with Scroll Arrows
-  const CarouselRow = ({ title, items }: { title: string, items: MediaItem[] }) => {
+  const CarouselRow = ({ title, items, isTop10 = false, showProgress = false }: { title: string, items: MediaItem[], isTop10?: boolean, showProgress?: boolean }) => {
     const scrollLeft = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.currentTarget.parentElement?.querySelector('.carousel-container')?.scrollBy({ left: -800, behavior: 'smooth' });
     };
@@ -114,29 +130,41 @@ export function Home() {
             <span className="text-3xl font-bold">&lsaquo;</span>
           </button>
           
-          <div className="carousel-container flex gap-2 overflow-x-auto pb-8 pt-4 px-4 md:px-12 scroll-smooth snap-x snap-mandatory no-scrollbar">
-            {items.map(item => (
-              <Link 
-                to={`/media/${item.id}`} 
+          <div className="carousel-container flex gap-4 overflow-x-auto pb-8 pt-4 px-4 md:px-12 scroll-smooth snap-x snap-mandatory no-scrollbar items-center">
+            {items.map((item, index) => (
+              <div 
                 key={item.id} 
-                className="shrink-0 w-[140px] md:w-[220px] lg:w-[260px] snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 rounded-md overflow-hidden bg-slate-900 shadow-lg aspect-[2/3] cursor-pointer origin-center"
+                className="shrink-0 flex items-center snap-start relative group transition-transform duration-300 hover:scale-110 hover:z-30 cursor-pointer origin-center"
+                onClick={() => navigate(`/media/${item.id}`)}
               >
-                <img 
-                  src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                  <h3 className="text-white font-bold text-sm md:text-base leading-tight line-clamp-2 drop-shadow-md mb-2">{item.title}</h3>
-                  <div className="flex items-center gap-2 text-xs font-semibold">
-                    <span className="text-green-500">Nuevo</span>
-                    <span className="text-gray-300 border border-gray-600 px-1">HD</span>
-                    <span className="text-gray-300">{item.duration || 'N/A'}</span>
+                {isTop10 && (
+                  <span className="text-[120px] md:text-[180px] font-black tracking-tighter text-black outline-text leading-none mr-[-20px] md:mr-[-40px] z-0 select-none drop-shadow-2xl">
+                    {index + 1}
+                  </span>
+                )}
+                <div className={`rounded-md overflow-hidden bg-slate-900 shadow-lg aspect-[2/3] ${isTop10 ? 'w-[120px] md:w-[180px]' : 'w-[140px] md:w-[220px] lg:w-[260px]'} relative z-10`}>
+                  <img 
+                    src={item.poster || 'https://via.placeholder.com/300x450?text=No+Poster'} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Poster'; }}
+                  />
+                  {showProgress && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600">
+                      <div className="h-full bg-[#E50914]" style={{ width: `${Math.random() * 60 + 20}%` }}></div>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                    <h3 className="text-white font-bold text-sm md:text-base leading-tight line-clamp-2 drop-shadow-md mb-2">{item.title}</h3>
+                    <div className="flex items-center gap-2 text-xs font-semibold">
+                      <span className="text-green-500">Nuevo</span>
+                      <span className="text-gray-300 border border-gray-600 px-1">HD</span>
+                      <span className="text-gray-300">{item.duration || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
 
@@ -182,7 +210,12 @@ export function Home() {
             <div className="hidden md:flex items-center gap-4 text-white">
               <span className="cursor-pointer font-bold text-sm">Niños</span>
               <span className="cursor-pointer text-xl">🔔</span>
-              <div className="w-8 h-8 bg-blue-600 rounded-sm cursor-pointer border border-transparent hover:border-white transition-colors"></div>
+              <div className="flex items-center gap-2 cursor-pointer group">
+                <div className="w-8 h-8 rounded-sm overflow-hidden border border-transparent group-hover:border-white transition-colors">
+                  <img src={activeProfile.avatar} alt={activeProfile.name} className="w-full h-full object-cover" />
+                </div>
+                <span className="text-xs">&#9660;</span>
+              </div>
             </div>
           </div>
         </div>
@@ -256,18 +289,18 @@ export function Home() {
                     </p>
 
                     <div className="flex gap-4">
-                      <Link 
-                        to={`/media/${featured.id}`}
+                      <button 
+                        onClick={() => navigate(`/media/${featured.id}`)}
                         className="px-6 md:px-8 py-2 md:py-3 bg-white text-black font-bold rounded-md hover:bg-white/80 transition flex items-center gap-2 text-lg"
                       >
-                        <span className="text-2xl">▶</span> Reproducir / Descargar
-                      </Link>
-                      <Link 
-                        to={`/media/${featured.id}`}
+                        <span className="text-2xl">▶</span> Reproducir
+                      </button>
+                      <button 
+                        onClick={() => navigate(`/media/${featured.id}`)}
                         className="px-6 md:px-8 py-2 md:py-3 bg-gray-500/50 text-white font-bold rounded-md hover:bg-gray-500/70 transition flex items-center gap-2 text-lg backdrop-blur-sm"
                       >
                         <span className="text-xl">ℹ</span> Más información
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -275,6 +308,10 @@ export function Home() {
 
               {/* CAROUSELS */}
               <div className="relative z-20 -mt-10 md:-mt-20">
+                {continueWatching.length > 0 && (
+                  <CarouselRow title={`Seguir viendo para ${activeProfile.name}`} items={continueWatching} showProgress={true} />
+                )}
+                <CarouselRow title="Las 10 películas más populares en México hoy" items={recents.slice(0, 10)} isTop10={true} />
                 <CarouselRow title="Agregados Recientemente" items={recents} />
                 <CarouselRow title="Películas Destacadas" items={movies} />
                 <CarouselRow title="Maratón de Series" items={series} />
@@ -283,6 +320,9 @@ export function Home() {
           )}
         </>
       )}
+
+      {/* Render Modal Overlay */}
+      {modalId && <MediaModal id={parseInt(modalId, 10)} onClose={() => navigate('/')} />}
 
       {/* Tailwind Custom Scrollbar for Netflix rows */}
       <style>{`
@@ -294,6 +334,10 @@ export function Home() {
         .no-scrollbar {
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
+        }
+        .outline-text {
+          -webkit-text-stroke: 4px #595959;
+          text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
         }
         body { background-color: #141414; }
       `}</style>
