@@ -177,8 +177,8 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
           {title}
         </h2>
         <div className="relative">
-          <button onClick={scrollLeft} className="absolute left-0 top-0 bottom-0 w-12 bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover/row:opacity-100 transition-all z-20 flex items-center justify-center">
-            <span className="text-3xl font-bold">&lsaquo;</span>
+          <button onClick={scrollLeft} className="absolute left-0 top-0 bottom-0 w-12 md:w-16 bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover/row:opacity-100 transition-all z-40 flex items-center justify-center">
+            <span className="text-4xl md:text-5xl font-bold">&lsaquo;</span>
           </button>
           
           <div className="carousel-container flex gap-4 overflow-x-auto pb-8 pt-4 px-4 md:px-12 scroll-smooth snap-x snap-mandatory no-scrollbar items-center">
@@ -219,8 +219,8 @@ export function Home({ activeProfile }: { activeProfile: { name: string, avatar:
             ))}
           </div>
 
-          <button onClick={scrollRight} className="absolute right-0 top-0 bottom-0 w-12 bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover/row:opacity-100 transition-all z-20 flex items-center justify-center">
-            <span className="text-3xl font-bold">&rsaquo;</span>
+          <button onClick={scrollRight} className="absolute right-0 top-0 bottom-0 w-12 md:w-16 bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover/row:opacity-100 transition-all z-40 flex items-center justify-center">
+            <span className="text-4xl md:text-5xl font-bold">&rsaquo;</span>
           </button>
         </div>
       </div>
