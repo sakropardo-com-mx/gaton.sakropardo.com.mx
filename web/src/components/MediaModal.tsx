@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabase';
 // @ts-ignore
-import Plyr from 'plyr-react';
+import { Plyr } from 'plyr-react';
 import 'plyr-react/plyr.css';
 
 export function MediaModal({ id, profileId, onClose }: { id: number; profileId: string; onClose: () => void }) {
