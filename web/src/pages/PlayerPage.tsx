@@ -69,6 +69,31 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
         if (ep.isCached) initialCache[ep.index] = true;
       });
       setLocalCache(initialCache);
+
+      // Verify cache with backend in case of page reload
+      const verifyCache = async () => {
+        try {
+          const urls = allEpisodes.map((ep: any) => ep.link);
+          const res = await fetch('/api/check_cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const newCache: Record<number, boolean> = {};
+            allEpisodes.forEach((ep: any) => {
+              if (data.cached_urls[ep.link]) {
+                newCache[ep.index] = true;
+              }
+            });
+            setLocalCache(prev => ({ ...prev, ...newCache }));
+          }
+        } catch (e) {
+          console.error('Error verifying cache:', e);
+        }
+      };
+      verifyCache();
     }
   }, [allEpisodes]);
 

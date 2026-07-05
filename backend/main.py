@@ -164,7 +164,7 @@ async def prepare_stream(payload: dict, background_tasks: BackgroundTasks):
     # Check if already processed
     cached_job = check_local_cache(job_id)
     if cached_job:
-        return {"job_id": job_id, "status": "ready"}
+        return {"job_id": job_id, "status": "ready", "video_path": cached_job["video_path"]}
         
     # Prevent starting multiple parallel downloads for the same job
     if job_id in JOBS and JOBS[job_id].get("status") not in ["error", "ready"]:
