@@ -6,6 +6,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [loading, setLoading] = useState(true);
   const [isWatched, setIsWatched] = useState(false);
   const [rating, setRating] = useState<number>(0);
+  const [episodeProgress, setEpisodeProgress] = useState<Record<string, boolean>>({});
   const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
         if (interactionData) {
           setIsWatched(interactionData.is_in_list || false);
           setRating(interactionData.rating || 0);
+          setEpisodeProgress(interactionData.episode_progress || {});
         }
       }
 
@@ -56,6 +58,24 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
       media_id: id,
       is_in_list: newState,
       rating: rating,
+      episode_progress: episodeProgress,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'profile_id, media_id' });
+  };
+
+  const toggleEpisode = async (index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const newProgress = { ...episodeProgress, [index]: !episodeProgress[index] };
+    setEpisodeProgress(newProgress);
+
+    await supabase.from('interactions').upsert({
+      profile_id: profileId,
+      media_id: id,
+      is_in_list: isWatched,
+      rating: rating,
+      episode_progress: newProgress,
       updated_at: new Date().toISOString()
     }, { onConflict: 'profile_id, media_id' });
   };
@@ -68,6 +88,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
       media_id: id,
       is_in_list: isWatched,
       rating: stars,
+      episode_progress: episodeProgress,
       updated_at: new Date().toISOString()
     }, { onConflict: 'profile_id, media_id' });
   };
@@ -167,25 +188,34 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                 <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                   {item.links.map((link: string, index: number) => {
                     const isSeason = link.toLowerCase().includes('temporada');
+                    const isSeen = episodeProgress[index];
                     return (
-                    <a 
-                      key={index}
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors text-gray-200 group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl font-light text-gray-500 group-hover:text-white transition-colors">{index + 1}</span>
-                        <div>
-                          <p className="font-bold text-white text-sm">
-                            {isSeason ? `Temporada o Pack ${index + 1}` : `Episodio / Parte ${index + 1}`}
-                          </p>
-                          <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
+                    <div key={index} className="flex gap-2 items-center group">
+                      <button 
+                        onClick={(e) => toggleEpisode(index, e)}
+                        className={`w-8 h-8 rounded-full border border-gray-500 flex items-center justify-center transition-colors flex-shrink-0 ${isSeen ? 'bg-green-600 border-green-500 text-white' : 'hover:border-white text-transparent hover:text-white'}`}
+                        title={isSeen ? "Marcar como no visto" : "Marcar como visto"}
+                      >
+                        ✓
+                      </button>
+                      <a 
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex-1 flex justify-between items-center p-4 bg-[#2f2f2f] hover:bg-[#404040] rounded-md transition-colors ${isSeen ? 'opacity-50' : ''} text-gray-200`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="text-2xl font-light text-gray-500 group-hover:text-white transition-colors">{index + 1}</span>
+                          <div>
+                            <p className="font-bold text-white text-sm">
+                              {isSeason ? `Temporada o Pack ${index + 1}` : `Episodio / Parte ${index + 1}`}
+                            </p>
+                            <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
+                          </div>
                         </div>
-                      </div>
-                      <span className="text-gray-400 group-hover:text-white transition-colors">⬇</span>
-                    </a>
+                        <span className="text-gray-400 group-hover:text-white transition-colors">⬇</span>
+                      </a>
+                    </div>
                   )})}
                 </div>
               ) : (
