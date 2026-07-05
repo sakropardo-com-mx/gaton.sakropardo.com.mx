@@ -35,7 +35,7 @@ jobs:
 
       - name: 🚀 Desplegar web al servidor
         run: |
-          rsync -avz --delete \
+          rsync -avz --delete --exclude 'streams/' \
             ./web/dist/ root@${{ secrets.HETZNER_IP }}:/opt/jadenn-stack/web/public/sakropardo-com-mx/gaton.sakropardo.com.mx/
 
       - name: ⚙️ Desplegar Backend (Streamer)
