@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 // @ts-ignore
@@ -39,6 +39,17 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
 
   const pollingInterval = useRef<any>(null);
   const plyrRef = useRef<any>(null);
+  const hasSeekedInitialRef = useRef<Record<number, boolean>>({});
+
+  const plyrSource = useMemo(() => ({
+    type: 'video',
+    sources: [{ src: streamVideoPath || '', type: 'video/mp4' }]
+  }), [streamVideoPath]);
+
+  const plyrOptions = useMemo(() => ({
+    autoplay: true, 
+    controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen']
+  }), []);
 
   // 1. Fetch initial progress and init cache
   useEffect(() => {
@@ -184,8 +195,9 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
       
       const currentProgs = episodeProgressRef.current;
       const savedData = typeof currentProgs[index] === 'object' ? currentProgs[index] : { seen: !!currentProgs[index], time: 0 };
-      if (savedData.time && savedData.time > 5) {
+      if (!hasSeekedInitialRef.current[index] && savedData.time && savedData.time > 5) {
         player.currentTime = savedData.time;
+        hasSeekedInitialRef.current[index] = true;
       }
 
       let lastSavedTime = player.currentTime;
@@ -325,11 +337,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
              <div className="w-full h-full relative group plyr-container">
                 <Plyr 
                   ref={plyrRef} 
-                  source={{ type: 'video', sources: [{ src: streamVideoPath, type: 'video/mp4' }] }} 
-                  options={{ 
-                    autoplay: true, 
-                    controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'] 
-                  }} 
+                  source={plyrSource as any} 
+                  options={plyrOptions as any} 
                 />
              </div>
           ) : streamStatus === 'error' ? (
