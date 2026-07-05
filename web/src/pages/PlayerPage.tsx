@@ -176,7 +176,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
        {/* Top Bar Overlay */}
        <div className="absolute top-0 left-0 right-0 z-50 p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
          <button onClick={() => navigate(-1)} className="text-white text-xl bg-black/50 hover:bg-[#E50914] p-3 px-6 rounded font-bold transition-colors pointer-events-auto flex items-center gap-2">
-            ← Volver
+            ← Volver a {episodeName}
          </button>
 
          {allEpisodes && allEpisodes.length > 0 && (
