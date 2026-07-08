@@ -26,6 +26,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
   const [streamJobId, setStreamJobId] = useState<string | null>(null);
   const [streamStatus, setStreamStatus] = useState<'idle' | 'started' | 'scraping' | 'downloading' | 'extracting' | 'converting' | 'ready' | 'error'>('idle');
   const [streamVideoPath, setStreamVideoPath] = useState<string | null>(null);
+  const [streamMultipleVideos, setStreamMultipleVideos] = useState<any[] | null>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamProgress, setStreamProgress] = useState<number>(0);
   const episodeProgressRef = useRef<Record<string, any>>({});
@@ -149,6 +150,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
         if (data.status === 'ready') {
           setStreamStatus('ready');
           setStreamVideoPath(data.video_path);
+          if (data.multiple_videos) setStreamMultipleVideos(data.multiple_videos);
           setLocalCache(prev => ({...prev, [index]: true}));
         } else {
           setStreamJobId(data.job_id);
@@ -172,6 +174,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
             setStreamStatus(data.status);
             if (data.progress) setStreamProgress(data.progress);
             if (data.video_path) setStreamVideoPath(data.video_path);
+            if (data.multiple_videos) setStreamMultipleVideos(data.multiple_videos);
             if (data.message) setStreamError(data.message);
             if (data.status === 'ready') {
               setLocalCache(prev => ({...prev, [index]: true}));
@@ -396,14 +399,29 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                     <h3 className="text-3xl font-bold mb-2">Video Procesado</h3>
                     <p className="text-gray-400 mb-8 text-sm">El archivo está listo. Gaton usará tu procesador local (Hardware Acceleration) para reproducir el formato MKV sin trabarse.</p>
                     
-                    <a 
-                      href={`mpc://${window.location.origin}${streamVideoPath}`}
-                      className="w-full py-4 bg-[#E50914] text-white font-bold text-xl rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all mb-4"
-                    >
-                      ▶ Reproducir en MPC-HC
-                    </a>
+                    {streamMultipleVideos && streamMultipleVideos.length > 1 ? (
+                      <div className="w-full flex flex-col gap-3 mb-6 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                        <span className="text-yellow-500 font-bold text-sm mb-2 text-left">Este paquete contiene {streamMultipleVideos.length} capítulos:</span>
+                        {streamMultipleVideos.map((vid: any, i: number) => (
+                          <a 
+                            key={i}
+                            href={`mpc://${window.location.origin}${vid.path}`}
+                            className="w-full py-3 bg-[#E50914] text-white font-bold rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all text-sm truncate px-4"
+                          >
+                            ▶ Reproducir {vid.name}
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <a 
+                        href={`mpc://${window.location.origin}${streamVideoPath}`}
+                        className="w-full py-4 bg-[#E50914] text-white font-bold text-xl rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all mb-4"
+                      >
+                        ▶ Reproducir en MPC-HC
+                      </a>
+                    )}
                     
-                    <p className="text-gray-500 text-xs">
+                    <p className="text-gray-500 text-xs mt-2">
                       Asegúrate de haber instalado el archivo <code className="text-gray-400 bg-black px-1 py-0.5 rounded">protocolo_mpc.reg</code> en tu PC.
                     </p>
                   </div>

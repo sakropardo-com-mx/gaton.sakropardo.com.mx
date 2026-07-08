@@ -104,12 +104,22 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const episodesList = item?.links ? item.links.map((link: string, index: number) => {
     const isSeason = link.toLowerCase().includes('temporada');
     let displayNumber: string | number = index + 1;
-    const match = link.match(/(?:_|-|\.|episodio|cap|capitulo)\s*0*(\d+)(?:\.rar|\.zip|\.mp4|\.mkv|\.avi|\/|$)/i);
-    if (match && match[1] && parseInt(match[1]) > index) {
-      displayNumber = match[1];
+    let packLabel = '';
+    
+    // Detect ranges like 1-2 or 1_-_2
+    const packMatch = link.match(/(\d+)\s*(?:-|_-_)\s*(\d+)(?:\.rar|\.zip|\.mp4|\.mkv|\.avi)/i);
+    if (packMatch) {
+       displayNumber = `${packMatch[1]}-${packMatch[2]}`;
+       packLabel = `Capítulos ${packMatch[1]} al ${packMatch[2]}`;
+    } else {
+      const match = link.match(/(?:_|-|\.|episodio|cap|capitulo)\s*0*(\d+)(?:\.rar|\.zip|\.mp4|\.mkv|\.avi|\/|$)/i);
+      if (match && match[1] && parseInt(match[1]) > index) {
+        displayNumber = match[1];
+      }
     }
+    
     const tmdbEpisode = tmdbEpisodes.find(e => e.episode_number == displayNumber);
-    const episodeName = tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio ${displayNumber}`);
+    const episodeName = packLabel ? packLabel : (tmdbEpisode ? tmdbEpisode.name : (isSeason ? `Temporada o Pack ${displayNumber}` : `Episodio ${displayNumber}`));
     const isCached = !!serverCache[link];
     
     return {

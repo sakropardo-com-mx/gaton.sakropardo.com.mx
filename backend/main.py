@@ -78,33 +78,37 @@ def process_download(job_id: str, mediafire_url: str, password: str):
             JOBS[job_id] = {"status": "error", "message": f"Error descomprimiendo: {result.stderr}"}
             return
 
-        # Find the video file
-        video_file = None
+        # Find all video files
+        video_files = []
         for root, dirs, files in os.walk(extract_dir):
             for file in files:
                 if file.lower().endswith(('.mkv', '.mp4', '.avi')):
-                    video_file = os.path.join(root, file)
-                    break
-            if video_file:
-                break
+                    video_files.append(os.path.join(root, file))
 
-        if not video_file:
+        if not video_files:
             JOBS[job_id] = {"status": "error", "message": "No se encontró ningún archivo de video en el rar"}
             return
+            
+        video_files.sort()
+        video_file = video_files[0]
 
         # Clean up rar to save space
         os.remove(rar_path)
 
-        # We skip ffmpeg conversion completely to stream raw via MPC-HC
-        relative_path = os.path.relpath(video_file, DOWNLOAD_DIR)
-        # Ensure spaces and special characters are handled if necessary, though relative path is okay.
-        # Nginx handles URL encoding in the frontend.
+        # Prepare multiple video payload
+        multiple_videos = []
+        for vf in video_files:
+            multiple_videos.append({
+                "path": f"/streams/{os.path.relpath(vf, DOWNLOAD_DIR)}",
+                "name": os.path.basename(vf)
+            })
 
-        # Assuming Nginx will serve /downloads directly, we just return the relative path
+        relative_path = os.path.relpath(video_file, DOWNLOAD_DIR)
         JOBS[job_id] = {
             "status": "ready",
             "video_path": f"/streams/{relative_path}",
-            "local_path": video_file
+            "local_path": video_file,
+            "multiple_videos": multiple_videos
         }
 
     except Exception as e:
@@ -120,18 +124,29 @@ def check_local_cache(job_id: str) -> dict:
         
     extract_dir = os.path.join(DOWNLOAD_DIR, job_id)
     if os.path.exists(extract_dir):
+        video_files = []
         for root, dirs, files in os.walk(extract_dir):
             for file in files:
                 if file.lower().endswith(('.mkv', '.mp4', '.avi')):
-                    video_file = os.path.join(root, file)
-                    relative_path = os.path.relpath(video_file, DOWNLOAD_DIR)
-                    job_data = {
-                        "status": "ready",
-                        "video_path": f"/streams/{relative_path}",
-                        "local_path": video_file
-                    }
-                    JOBS[job_id] = job_data
-                    return job_data
+                    video_files.append(os.path.join(root, file))
+                    
+        if video_files:
+            video_files.sort()
+            multiple_videos = []
+            for vf in video_files:
+                multiple_videos.append({
+                    "path": f"/streams/{os.path.relpath(vf, DOWNLOAD_DIR)}",
+                    "name": os.path.basename(vf)
+                })
+            
+            job_data = {
+                "status": "ready",
+                "video_path": multiple_videos[0]["path"],
+                "local_path": video_files[0],
+                "multiple_videos": multiple_videos
+            }
+            JOBS[job_id] = job_data
+            return job_data
     return None
 
 @app.post("/api/prepare")
