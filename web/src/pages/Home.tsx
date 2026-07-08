@@ -21,6 +21,7 @@ export function Home({ activeProfile, category = 'Inicio' }: { activeProfile: { 
   const [movies, setMovies] = useState<MediaItem[]>([]);
   const [series, setSeries] = useState<MediaItem[]>([]);
   const [continueWatching, setContinueWatching] = useState<MediaItem[]>([]);
+  const [myListItems, setMyListItems] = useState<MediaItem[]>([]);
   
   const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
   const [searchInput, setSearchInput] = useState('');
@@ -96,17 +97,29 @@ export function Home({ activeProfile, category = 'Inicio' }: { activeProfile: { 
 
       if (serieData) setSeries(serieData as MediaItem[]);
 
-      // 4. Load Continue Watching from localStorage
-      const watchedIds = Object.keys(localStorage)
-        .filter(k => k.startsWith('watched_') && localStorage.getItem(k) === 'true')
-        .map(k => parseInt(k.replace('watched_', '')));
+      // 4. Load 'Mi lista' & 'Seguir viendo' from Supabase interactions
+      const { data: interactions } = await supabase
+        .from('interactions')
+        .select('media_id, is_in_list, episode_progress')
+        .eq('profile_id', activeProfile.id);
+
+      if (interactions && interactions.length > 0) {
+        const myListIds = interactions.filter(i => i.is_in_list).map(i => i.media_id);
+        const watchedIds = interactions.filter(i => i.episode_progress && Object.keys(i.episode_progress).length > 0).map(i => i.media_id);
         
-      if (watchedIds.length > 0) {
-        const { data: watchedData } = await supabase
-          .from('all')
-          .select('id, title, poster, date, duration, sinopsis')
-          .in('id', watchedIds.slice(0, 15));
-        if (watchedData) setContinueWatching(watchedData as MediaItem[]);
+        const allRelevantIds = [...new Set([...myListIds, ...watchedIds])];
+        
+        if (allRelevantIds.length > 0) {
+          const { data: interactionMedia } = await supabase
+            .from('all')
+            .select('id, title, poster, date, duration, sinopsis')
+            .in('id', allRelevantIds.slice(0, 100));
+            
+          if (interactionMedia) {
+             setMyListItems(interactionMedia.filter(m => myListIds.includes(m.id)) as MediaItem[]);
+             setContinueWatching(interactionMedia.filter(m => watchedIds.includes(m.id)) as MediaItem[]);
+          }
+        }
       }
 
       setLoading(false);
@@ -468,12 +481,21 @@ export function Home({ activeProfile, category = 'Inicio' }: { activeProfile: { 
 
               {/* CAROUSELS */}
               <div className="relative z-20 -mt-10 md:-mt-20">
-                {(activeCategory === 'Inicio' || activeCategory === 'Mi lista') && continueWatching.length > 0 && (
+                {activeCategory === 'Inicio' && continueWatching.length > 0 && (
                   <CarouselRow title={`Seguir viendo para ${activeProfile.name}`} items={continueWatching} showProgress={true} />
                 )}
-                
-                {activeCategory === 'Mi lista' && continueWatching.length === 0 && (
-                  <div className="text-center py-20 text-gray-400">Aún no tienes elementos en tu lista.</div>
+                {activeCategory === 'Inicio' && myListItems.length > 0 && (
+                  <CarouselRow title="Mi Lista" items={myListItems} />
+                )}
+
+                {activeCategory === 'Mi lista' && (
+                  <>
+                    {myListItems.length > 0 && <CarouselRow title="Agregados a Mi Lista" items={myListItems} />}
+                    {continueWatching.length > 0 && <CarouselRow title="Historial de Visualización" items={continueWatching} showProgress={true} />}
+                    {myListItems.length === 0 && continueWatching.length === 0 && (
+                      <div className="text-center py-20 text-gray-400">Aún no tienes elementos en tu lista ni historial.</div>
+                    )}
+                  </>
                 )}
 
                 {activeCategory === 'Inicio' && (
