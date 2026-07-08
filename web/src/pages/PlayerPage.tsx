@@ -65,15 +65,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     };
   }, []);
 
-  const plyrSource = useMemo(() => ({
-    type: 'video',
-    sources: [{ src: streamVideoPath || '', type: 'video/mp4' }]
-  }), [streamVideoPath]);
-
-  const plyrOptions = useMemo(() => ({
-    autoplay: true, 
-    controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen']
-  }), []);
+  // Plyr is no longer used, as we stream directly to MPC-HC.
 
   // 1. Fetch initial progress and init cache
   useEffect(() => {
@@ -234,63 +226,23 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     }
   };
 
-  // 4. Plyr sync and Autoplay
-  useEffect(() => {
-    if (streamStatus === 'ready' && plyrRef.current?.plyr) {
-      const player = plyrRef.current.plyr;
-      
-
-      let lastSavedTime = player.currentTime;
-      const onTimeUpdate = () => {
-        const time = player.currentTime;
-        if (Math.abs(time - lastSavedTime) > 10) {
-          lastSavedTime = time;
-          const currentData = typeof episodeProgressRef.current[index] === 'object' ? episodeProgressRef.current[index] : { seen: !!episodeProgressRef.current[index] };
-          const newProgress = { ...episodeProgressRef.current, [index]: { ...currentData, time, seen: true } };
-          episodeProgressRef.current = newProgress;
-          supabase.from('interactions').upsert({ profile_id: profileId, media_id: id, episode_progress: newProgress, updated_at: new Date().toISOString() }, { onConflict: 'profile_id,media_id' }).then();
-        }
-      };
-
-      const onEnded = () => {
-        if (autoplayNext && allEpisodes && index < allEpisodes.length - 1) {
-          playEpisode(allEpisodes[index + 1]);
-        }
-      };
-
-      const onLoadedMetadata = () => {
-        const currentProgs = episodeProgressRef.current;
-        const savedData = typeof currentProgs[index] === 'object' ? currentProgs[index] : { seen: !!currentProgs[index], time: 0 };
-        if (!hasSeekedInitialRef.current[index] && savedData.time && savedData.time > 5) {
-          player.currentTime = savedData.time;
-          hasSeekedInitialRef.current[index] = true;
-        }
-      };
-      
-      // Fix for "player.on is not a function" error
-      if (typeof player.on === 'function') {
-        player.on('timeupdate', onTimeUpdate);
-        player.on('ended', onEnded);
-        player.on('loadedmetadata', onLoadedMetadata);
-      } else if (typeof player.addEventListener === 'function') {
-        player.addEventListener('timeupdate', onTimeUpdate);
-        player.addEventListener('ended', onEnded);
-        player.addEventListener('loadedmetadata', onLoadedMetadata);
-      }
-      
-      return () => {
-        if (typeof player.off === 'function') {
-          player.off('timeupdate', onTimeUpdate);
-          player.off('ended', onEnded);
-          player.off('loadedmetadata', onLoadedMetadata);
-        } else if (typeof player.removeEventListener === 'function') {
-          player.removeEventListener('timeupdate', onTimeUpdate);
-          player.removeEventListener('ended', onEnded);
-          player.removeEventListener('loadedmetadata', onLoadedMetadata);
-        }
-      };
-    }
-  }, [streamStatus, index, profileId, id, autoplayNext, allEpisodes]);
+  // 4. Progress Tracking for MPC-HC
+  // Since MPC-HC is external, we cannot track 'timeupdate'. We mark the episode as seen when they click play.
+  const recordProgressAndPlay = (videoPath: string) => {
+    const currentProgs = episodeProgressRef.current;
+    const currentData = typeof currentProgs[index] === 'object' ? currentProgs[index] : { seen: !!currentProgs[index] };
+    const newProgress = { ...currentProgs, [index]: { ...currentData, seen: true, time: 10 } };
+    episodeProgressRef.current = newProgress;
+    
+    supabase.from('interactions').upsert({ 
+      profile_id: profileId, 
+      media_id: id, 
+      episode_progress: newProgress, 
+      updated_at: new Date().toISOString() 
+    }, { onConflict: 'profile_id,media_id' }).then();
+    
+    window.location.href = `mpc://${window.location.origin}${videoPath}`;
+  };
 
   const playEpisode = (ep: any) => {
     navigate(`/play/${id}`, {
@@ -398,22 +350,22 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                       <div className="w-full flex flex-col gap-3 mb-6 max-h-64 overflow-y-auto custom-scrollbar pr-2">
                         <span className="text-yellow-500 font-bold text-sm mb-2 text-left">Este paquete contiene {streamMultipleVideos.length} capítulos:</span>
                         {streamMultipleVideos.map((vid: any, i: number) => (
-                          <a 
+                          <button 
                             key={i}
-                            href={`mpc://${window.location.origin}${vid.path}`}
+                            onClick={() => recordProgressAndPlay(vid.path)}
                             className="w-full py-3 bg-[#E50914] text-white font-bold rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all text-sm truncate px-4"
                           >
                             ▶ Reproducir {vid.name}
-                          </a>
+                          </button>
                         ))}
                       </div>
                     ) : (
-                      <a 
-                        href={`mpc://${window.location.origin}${streamVideoPath}`}
+                      <button 
+                        onClick={() => recordProgressAndPlay(streamVideoPath)}
                         className="w-full py-4 bg-[#E50914] text-white font-bold text-xl rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all mb-4"
                       >
                         ▶ Reproducir en MPC-HC
-                      </a>
+                      </button>
                     )}
                     
                     <p className="text-gray-500 text-xs mt-2">
