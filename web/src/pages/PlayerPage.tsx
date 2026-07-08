@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 // @ts-ignore
@@ -242,6 +242,31 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     window.location.href = `mpc://${window.location.origin}${videoPath}`;
   };
 
+  const groupedVideos = useMemo(() => {
+    if (!streamMultipleVideos || streamMultipleVideos.length <= 1) return null;
+    const groups: Record<string, any[]> = {};
+    let hasSeasons = false;
+    
+    streamMultipleVideos.forEach(vid => {
+      // Matches: 1.1, 01.02, S01E02, S1 E2, etc.
+      const match = vid.name.match(/(?:S0*(\d+)[Ex]0*(\d+))|(?:0*(\d+)\.0*(\d+))/i);
+      if (match) {
+        hasSeasons = true;
+        const season = match[1] || match[3];
+        const ep = match[2] || match[4];
+        const groupName = `Temporada ${season}`;
+        if (!groups[groupName]) groups[groupName] = [];
+        groups[groupName].push({ ...vid, cleanName: `Episodio ${ep} (${vid.name})` });
+      } else {
+        if (!groups['Otros Extras']) groups['Otros Extras'] = [];
+        groups['Otros Extras'].push({ ...vid, cleanName: vid.name });
+      }
+    });
+    
+    if (!hasSeasons) return null;
+    return groups;
+  }, [streamMultipleVideos]);
+
   const playEpisode = (ep: any) => {
     navigate(`/play/${id}`, {
       replace: true,
@@ -346,16 +371,40 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                     
                     {streamMultipleVideos && streamMultipleVideos.length > 1 ? (
                       <div className="w-full flex flex-col gap-3 mb-6 max-h-64 overflow-y-auto custom-scrollbar pr-2">
-                        <span className="text-yellow-500 font-bold text-sm mb-2 text-left">Este paquete contiene {streamMultipleVideos.length} capítulos:</span>
-                        {streamMultipleVideos.map((vid: any, i: number) => (
-                          <button 
-                            key={i}
-                            onClick={() => recordProgressAndPlay(vid.path)}
-                            className="w-full py-3 bg-[#E50914] text-white font-bold rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all text-sm truncate px-4"
-                          >
-                            ▶ Reproducir {vid.name}
-                          </button>
-                        ))}
+                        {groupedVideos ? (
+                          <>
+                            <span className="text-yellow-500 font-bold text-sm mb-2 text-left">Este paquete está estructurado por temporadas:</span>
+                            {Object.entries(groupedVideos).map(([seasonName, videos]) => (
+                              <div key={seasonName} className="mb-4">
+                                <h4 className="text-white font-bold text-lg mb-2 text-left border-b border-gray-600 pb-1">{seasonName}</h4>
+                                <div className="flex flex-col gap-2">
+                                  {videos.map((vid: any, i: number) => (
+                                    <button 
+                                      key={i}
+                                      onClick={() => recordProgressAndPlay(vid.path)}
+                                      className="w-full py-2 bg-[#E50914] text-white font-bold rounded shadow hover:bg-red-700 hover:scale-[1.02] transition-all text-xs truncate px-4 text-left flex justify-between items-center"
+                                    >
+                                      <span>▶ Reproducir {vid.cleanName}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-yellow-500 font-bold text-sm mb-2 text-left">Este paquete contiene {streamMultipleVideos.length} capítulos:</span>
+                            {streamMultipleVideos.map((vid: any, i: number) => (
+                              <button 
+                                key={i}
+                                onClick={() => recordProgressAndPlay(vid.path)}
+                                className="w-full py-3 bg-[#E50914] text-white font-bold rounded shadow-lg hover:bg-red-700 hover:scale-[1.02] transition-all text-sm truncate px-4"
+                              >
+                                ▶ Reproducir {vid.name}
+                              </button>
+                            ))}
+                          </>
+                        )}
                       </div>
                     ) : (
                       <button 
