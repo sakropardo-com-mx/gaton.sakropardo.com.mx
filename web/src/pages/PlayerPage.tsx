@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 // @ts-ignore
@@ -39,8 +39,6 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
   const [localCache, setLocalCache] = useState<Record<number, boolean>>({});
 
   const pollingInterval = useRef<any>(null);
-  const plyrRef = useRef<any>(null);
-  const hasSeekedInitialRef = useRef<Record<number, boolean>>({});
 
   // Auto-hide top bar
   const [isMouseIdle, setIsMouseIdle] = useState(false);
