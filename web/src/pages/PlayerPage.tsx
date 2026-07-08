@@ -241,7 +241,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     
     // Generate M3U playlist to avoid URL encoding issues with external protocols
     const streamUrl = `${window.location.origin}${encodeURI(videoPath)}`;
-    const m3uContent = `#EXTM3U\n#EXTINF:-1,${videoName}\n${streamUrl}`;
+    // PRO HACK: Inyectamos comandos ocultos para forzar a VLC a usar un caché monstruoso de 15 segundos
+    const m3uContent = `#EXTM3U\n#EXTINF:-1,${videoName}\n#EXTVLCOPT:network-caching=15000\n${streamUrl}`;
     
     const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
     const blobUrl = URL.createObjectURL(blob);
