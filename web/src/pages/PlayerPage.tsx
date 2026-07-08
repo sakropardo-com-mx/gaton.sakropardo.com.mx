@@ -43,7 +43,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
   // Auto-hide top bar
   const [isMouseIdle, setIsMouseIdle] = useState(false);
   const [downloadedFiles, setDownloadedFiles] = useState<Record<string, boolean>>({});
-  const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mouseTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     const handleMouseMove = () => {
