@@ -226,7 +226,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
 
   // 4. Progress Tracking for MPC-HC
   // Since MPC-HC is external, we cannot track 'timeupdate'. We mark the episode as seen when they click play.
-  const recordProgressAndPlay = (videoPath: string) => {
+  const recordProgressAndPlay = (videoPath: string, videoName: string) => {
     const currentProgs = episodeProgressRef.current;
     const currentData = typeof currentProgs[index] === 'object' ? currentProgs[index] : { seen: !!currentProgs[index] };
     const newProgress = { ...currentProgs, [index]: { ...currentData, seen: true, time: 10 } };
@@ -239,7 +239,20 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
       updated_at: new Date().toISOString() 
     }, { onConflict: 'profile_id,media_id' }).then();
     
-    window.location.href = `mpc://${window.location.origin}${videoPath}`;
+    // Generate M3U playlist to avoid URL encoding issues with external protocols
+    const streamUrl = `${window.location.origin}${encodeURI(videoPath)}`;
+    const m3uContent = `#EXTM3U\n#EXTINF:-1,${videoName}\n${streamUrl}`;
+    
+    const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+    const blobUrl = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `${videoName}.m3u`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
   };
 
   const groupedVideos = useMemo(() => {
@@ -381,7 +394,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                                   {videos.map((vid: any, i: number) => (
                                     <button 
                                       key={i}
-                                      onClick={() => recordProgressAndPlay(vid.path)}
+                                      onClick={() => recordProgressAndPlay(vid.path, vid.name)}
                                       className="w-full py-2 bg-[#E50914] text-white font-bold rounded shadow hover:bg-red-700 hover:scale-[1.02] transition-all text-xs truncate px-4 text-left flex justify-between items-center"
                                     >
                                       <span>▶ Reproducir {vid.cleanName}</span>
@@ -397,7 +410,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                             {streamMultipleVideos.map((vid: any, i: number) => (
                               <button 
                                 key={i}
-                                onClick={() => recordProgressAndPlay(vid.path)}
+                                onClick={() => recordProgressAndPlay(vid.path, vid.name)}
                                 className="w-full py-3 bg-[#E50914] text-white font-bold rounded shadow-lg hover:bg-red-700 hover:scale-[1.02] transition-all text-sm truncate px-4"
                               >
                                 ▶ Reproducir {vid.name}
@@ -408,15 +421,15 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                       </div>
                     ) : (
                       <button 
-                        onClick={() => recordProgressAndPlay(streamVideoPath)}
-                        className="w-full py-4 bg-[#E50914] text-white font-bold text-xl rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all mb-4"
+                        onClick={() => recordProgressAndPlay(streamVideoPath, `Episodio_${index+1}`)}
+                        className="w-full py-4 bg-[#E50914] text-white font-bold text-xl rounded shadow-lg hover:bg-red-700 hover:scale-[1.02] transition-all mb-4"
                       >
                         ▶ Reproducir en MPC-HC
                       </button>
                     )}
                     
                     <p className="text-gray-500 text-xs mt-2">
-                      Asegúrate de haber instalado el archivo <code className="text-gray-400 bg-black px-1 py-0.5 rounded">protocolo_mpc.reg</code> en tu PC.
+                      Gaton descargará un archivo de lista <code className="text-gray-400 bg-black px-1 py-0.5 rounded">.m3u</code>. Solo dale clic para que se abra en tu reproductor.
                     </p>
                   </div>
                </div>
