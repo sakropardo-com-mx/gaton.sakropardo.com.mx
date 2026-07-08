@@ -95,30 +95,12 @@ def process_download(job_id: str, mediafire_url: str, password: str):
         # Clean up rar to save space
         os.remove(rar_path)
 
-        JOBS[job_id]["status"] = "converting"
-        
-        # Convert audio to AAC so browsers can play it (keeps video intact)
-        final_video = os.path.splitext(video_file)[0] + "_web.mp4"
-        ffmpeg_cmd = [
-            "ffmpeg", "-y", "-i", video_file, 
-            "-threads", "0",    # Use all available CPU cores
-            "-c:v", "copy",     # Copy video stream to be blazing fast
-            "-c:a", "aac",      # Convert audio to aac for browser compatibility
-            "-b:a", "192k",
-            "-movflags", "+faststart", # CRITICAL: Allows instant streaming in browsers
-            final_video
-        ]
-        
-        conv_result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
-        if conv_result.returncode != 0:
-            JOBS[job_id] = {"status": "error", "message": f"Error convirtiendo audio: {conv_result.stderr[-200:]}"}
-            return
-            
-        # Remove original mkv to save space
-        os.remove(video_file)
+        # We skip ffmpeg conversion completely to stream raw via MPC-HC
+        relative_path = os.path.relpath(video_file, DOWNLOAD_DIR)
+        # Ensure spaces and special characters are handled if necessary, though relative path is okay.
+        # Nginx handles URL encoding in the frontend.
 
         # Assuming Nginx will serve /downloads directly, we just return the relative path
-        relative_path = os.path.relpath(final_video, DOWNLOAD_DIR)
         JOBS[job_id] = {
             "status": "ready",
             "video_path": f"/streams/{relative_path}",
@@ -140,13 +122,13 @@ def check_local_cache(job_id: str) -> dict:
     if os.path.exists(extract_dir):
         for root, dirs, files in os.walk(extract_dir):
             for file in files:
-                if file.endswith("_web.mp4"):
-                    final_video = os.path.join(root, file)
-                    relative_path = os.path.relpath(final_video, DOWNLOAD_DIR)
+                if file.lower().endswith(('.mkv', '.mp4', '.avi')):
+                    video_file = os.path.join(root, file)
+                    relative_path = os.path.relpath(video_file, DOWNLOAD_DIR)
                     job_data = {
                         "status": "ready",
                         "video_path": f"/streams/{relative_path}",
-                        "local_path": final_video
+                        "local_path": video_file
                     }
                     JOBS[job_id] = job_data
                     return job_data
