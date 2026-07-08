@@ -240,7 +240,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     }, { onConflict: 'profile_id,media_id' }).then();
     
     // Generate M3U playlist to avoid URL encoding issues with external protocols
-    const streamUrl = `${window.location.origin}${encodeURI(videoPath)}`;
+    // PRO HACK: Use direct IP to bypass Cloudflare proxy and its artificial bandwidth throttling
+    const streamUrl = `http://178.104.120.114${encodeURI(videoPath)}`;
     const m3uContent = `#EXTM3U\n#EXTINF:-1,${videoName}\n${streamUrl}`;
     
     const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
