@@ -448,7 +448,6 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                       El archivo se descargará con el nombre de <code className="text-gray-400 bg-black px-1 py-0.5 rounded">{mediaDetails?.title || mediaDetails?.name}</code>. Podrás abrirlo en tu PC sin esperas.
                     </p>
                   </div>
-               </div></div>
                </div>
             ) : streamStatus === 'error' ? (
                <div className="text-center text-white">
