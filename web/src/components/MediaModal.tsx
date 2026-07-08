@@ -142,7 +142,8 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
         password: item?.contrasena || '',
         episodeName,
         cachedUrl: serverCache[link] || null,
-        allEpisodes: episodesList
+        allEpisodes: episodesList,
+        itemName: item?.nombre || item?.title || 'GatonPlay'
       }
     });
   };

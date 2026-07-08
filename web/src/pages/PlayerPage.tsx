@@ -20,7 +20,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     );
   }
 
-  const { link, index, password, episodeName, cachedUrl, allEpisodes } = state;
+  const { link, index, password, episodeName, cachedUrl, allEpisodes, itemName } = state;
   const profileId = activeProfile.id;
 
   const [streamJobId, setStreamJobId] = useState<string | null>(null);
@@ -243,7 +243,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     setDownloadedFiles(prev => ({ ...prev, [videoName]: true }));
 
     // Construct precise TMDB name
-    const baseName = mediaDetails?.title || mediaDetails?.name || "GatonPlay";
+    const baseName = itemName || "GatonPlay";
     const extension = videoName.split('.').pop() || 'mkv';
     
     // Si tiene temporada/capítulo (ej. S01E02), extraerlo para que el archivo quede limpio
@@ -446,7 +446,7 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                     )}
                     
                     <p className="text-gray-500 text-xs mt-2">
-                      El archivo se descargará con el nombre de <code className="text-gray-400 bg-black px-1 py-0.5 rounded">{mediaDetails?.title || mediaDetails?.name}</code>. Podrás abrirlo en tu PC sin esperas.
+                      El archivo se descargará con el nombre de <code className="text-gray-400 bg-black px-1 py-0.5 rounded">{itemName}</code>. Podrás abrirlo en tu PC sin esperas.
                     </p>
                   </div>
                </div>
