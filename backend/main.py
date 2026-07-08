@@ -105,6 +105,7 @@ def process_download(job_id: str, mediafire_url: str, password: str):
             "-c:v", "copy",     # Copy video stream to be blazing fast
             "-c:a", "aac",      # Convert audio to aac for browser compatibility
             "-b:a", "192k",
+            "-movflags", "+faststart", # CRITICAL: Allows instant streaming in browsers
             final_video
         ]
         
