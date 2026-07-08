@@ -42,7 +42,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
 
   // Auto-hide top bar
   const [isMouseIdle, setIsMouseIdle] = useState(false);
-  const mouseTimeoutRef = useRef<any>(null);
+  const [downloadedFiles, setDownloadedFiles] = useState<Record<string, boolean>>({});
+  const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleMouseMove = () => {
@@ -224,9 +225,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     }
   };
 
-  // 4. Progress Tracking for MPC-HC
-  // Since MPC-HC is external, we cannot track 'timeupdate'. We mark the episode as seen when they click play.
-  const recordProgressAndPlay = (videoPath: string, videoName: string) => {
+  // 4. Progress Tracking & Direct Download
+  const recordProgressAndDownload = (videoPath: string, videoName: string) => {
     const currentProgs = episodeProgressRef.current;
     const currentData = typeof currentProgs[index] === 'object' ? currentProgs[index] : { seen: !!currentProgs[index] };
     const newProgress = { ...currentProgs, [index]: { ...currentData, seen: true, time: 10 } };
@@ -239,21 +239,31 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
       updated_at: new Date().toISOString() 
     }, { onConflict: 'profile_id,media_id' }).then();
     
-    // Generate M3U playlist to avoid URL encoding issues with external protocols
+    // Mark as downloaded in UI
+    setDownloadedFiles(prev => ({ ...prev, [videoName]: true }));
+
+    // Construct precise TMDB name
+    const baseName = mediaDetails?.title || mediaDetails?.name || "GatonPlay";
+    const extension = videoName.split('.').pop() || 'mkv';
+    
+    // Si tiene temporada/capítulo (ej. S01E02), extraerlo para que el archivo quede limpio
+    let finalFileName = `${baseName} - ${videoName}`;
+    const match = videoName.match(/(?:S0*(\d+)[Ex]0*(\d+))|(?:0*(\d+)\.0*(\d+))/i);
+    if (match) {
+        const season = match[1] || match[3];
+        const ep = match[2] || match[4];
+        finalFileName = `${baseName} - S${season.padStart(2, '0')}E${ep.padStart(2, '0')}.${extension}`;
+    }
+
     const streamUrl = `${window.location.origin}${encodeURI(videoPath)}`;
-    // PRO HACK: Inyectamos comandos ocultos para forzar a VLC a usar un caché monstruoso de 15 segundos
-    const m3uContent = `#EXTM3U\n#EXTINF:-1,${videoName}\n#EXTVLCOPT:network-caching=15000\n${streamUrl}`;
     
-    const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
-    const blobUrl = URL.createObjectURL(blob);
-    
+    // Trigger direct download
     const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = `${videoName}.m3u`;
+    a.href = streamUrl;
+    a.download = finalFileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(blobUrl);
   };
 
   const groupedVideos = useMemo(() => {
@@ -376,12 +386,11 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
        {/* Fullscreen Player UI */}
        <div className="flex-1 flex items-center justify-center relative w-full h-full">
           <div key={streamVideoPath || 'loading-state'} className="w-full h-full flex items-center justify-center">
-            {streamStatus === 'ready' && streamVideoPath ? (
-               <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
+            {streamStatus === 'ready' && stream                <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
                   <div className="bg-[#181818] border border-gray-700 p-10 rounded-2xl shadow-2xl flex flex-col items-center max-w-lg text-center">
-                    <span className="text-7xl block mb-6 drop-shadow-lg">🎬</span>
-                    <h3 className="text-3xl font-bold mb-2">Video Procesado</h3>
-                    <p className="text-gray-400 mb-8 text-sm">El archivo está listo. Gaton usará tu procesador local (Hardware Acceleration) para reproducir el formato MKV sin trabarse.</p>
+                    <span className="text-7xl block mb-6 drop-shadow-lg">📥</span>
+                    <h3 className="text-3xl font-bold mb-2">Listo para Descargar</h3>
+                    <p className="text-gray-400 mb-8 text-sm">Debido al gran tamaño de este formato (MKV 4K/1080p), la descarga directa a tu PC garantiza cero lag y máxima calidad visual.</p>
                     
                     {streamMultipleVideos && streamMultipleVideos.length > 1 ? (
                       <div className="w-full flex flex-col gap-3 mb-6 max-h-64 overflow-y-auto custom-scrollbar pr-2">
@@ -392,15 +401,18 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                               <div key={seasonName} className="mb-4">
                                 <h4 className="text-white font-bold text-lg mb-2 text-left border-b border-gray-600 pb-1">{seasonName}</h4>
                                 <div className="flex flex-col gap-2">
-                                  {videos.map((vid: any, i: number) => (
-                                    <button 
-                                      key={i}
-                                      onClick={() => recordProgressAndPlay(vid.path, vid.name)}
-                                      className="w-full py-2 bg-[#E50914] text-white font-bold rounded shadow hover:bg-red-700 hover:scale-[1.02] transition-all text-xs truncate px-4 text-left flex justify-between items-center"
-                                    >
-                                      <span>▶ Reproducir {vid.cleanName}</span>
-                                    </button>
-                                  ))}
+                                  {videos.map((vid: any, i: number) => {
+                                    const isDownloaded = downloadedFiles[vid.name];
+                                    return (
+                                      <button 
+                                        key={i}
+                                        onClick={() => recordProgressAndDownload(vid.path, vid.name)}
+                                        className={`w-full py-2 font-bold rounded shadow transition-all text-xs truncate px-4 text-left flex justify-between items-center ${isDownloaded ? 'bg-gray-700 text-gray-300' : 'bg-[#E50914] text-white hover:bg-red-700 hover:scale-[1.02]'}`}
+                                      >
+                                        <span>{isDownloaded ? '✅ Descargando / Abierto' : `📥 Descargar ${vid.cleanName}`}</span>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             ))}
@@ -408,31 +420,35 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
                         ) : (
                           <>
                             <span className="text-yellow-500 font-bold text-sm mb-2 text-left">Este paquete contiene {streamMultipleVideos.length} capítulos:</span>
-                            {streamMultipleVideos.map((vid: any, i: number) => (
-                              <button 
-                                key={i}
-                                onClick={() => recordProgressAndPlay(vid.path, vid.name)}
-                                className="w-full py-3 bg-[#E50914] text-white font-bold rounded shadow-lg hover:bg-red-700 hover:scale-[1.02] transition-all text-sm truncate px-4"
-                              >
-                                ▶ Reproducir {vid.name}
-                              </button>
-                            ))}
+                            {streamMultipleVideos.map((vid: any, i: number) => {
+                              const isDownloaded = downloadedFiles[vid.name];
+                              return (
+                                <button 
+                                  key={i}
+                                  onClick={() => recordProgressAndDownload(vid.path, vid.name)}
+                                  className={`w-full py-3 font-bold rounded shadow-lg transition-all text-sm truncate px-4 ${isDownloaded ? 'bg-gray-700 text-gray-300' : 'bg-[#E50914] text-white hover:bg-red-700 hover:scale-[1.02]'}`}
+                                >
+                                  {isDownloaded ? '✅ Archivo Abierto (Descargando)' : `📥 Descargar ${vid.name}`}
+                                </button>
+                              );
+                            })}
                           </>
                         )}
                       </div>
                     ) : (
                       <button 
-                        onClick={() => recordProgressAndPlay(streamVideoPath, `Episodio_${index+1}`)}
-                        className="w-full py-4 bg-[#E50914] text-white font-bold text-xl rounded shadow-lg hover:bg-red-700 hover:scale-[1.02] transition-all mb-4"
+                        onClick={() => recordProgressAndDownload(streamVideoPath || '', `Episodio_${index+1}`)}
+                        className={`w-full py-4 font-bold text-xl rounded shadow-lg transition-all mb-4 ${downloadedFiles[`Episodio_${index+1}`] ? 'bg-gray-700 text-gray-300' : 'bg-[#E50914] text-white hover:bg-red-700 hover:scale-[1.02]'}`}
                       >
-                        ▶ Reproducir en MPC-HC
+                        {downloadedFiles[`Episodio_${index+1}`] ? '✅ Descarga Iniciada' : '📥 Descargar Capítulo Nativo'}
                       </button>
                     )}
                     
                     <p className="text-gray-500 text-xs mt-2">
-                      Gaton descargará un archivo de lista <code className="text-gray-400 bg-black px-1 py-0.5 rounded">.m3u</code>. Solo dale clic para que se abra en tu reproductor.
+                      El archivo se descargará con el nombre de <code className="text-gray-400 bg-black px-1 py-0.5 rounded">{mediaDetails?.title || mediaDetails?.name}</code>. Podrás abrirlo en tu PC sin esperas.
                     </p>
                   </div>
+               </div></div>
                </div>
             ) : streamStatus === 'error' ? (
                <div className="text-center text-white">
