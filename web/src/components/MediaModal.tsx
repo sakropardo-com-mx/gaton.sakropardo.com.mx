@@ -143,7 +143,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
         episodeName,
         cachedUrl: serverCache[link] || null,
         allEpisodes: episodesList,
-        itemName: item?.nombre || item?.title || 'GatonPlay'
+        itemName: cleanTitleText(item?.nombre || item?.title || 'GatonPlay')
       }
     });
   };
