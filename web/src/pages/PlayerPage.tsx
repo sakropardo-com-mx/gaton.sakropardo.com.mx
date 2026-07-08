@@ -386,7 +386,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
        {/* Fullscreen Player UI */}
        <div className="flex-1 flex items-center justify-center relative w-full h-full">
           <div key={streamVideoPath || 'loading-state'} className="w-full h-full flex items-center justify-center">
-            {streamStatus === 'ready' && stream                <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
+            {streamStatus === 'ready' && streamVideoPath ? (
+               <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
                   <div className="bg-[#181818] border border-gray-700 p-10 rounded-2xl shadow-2xl flex flex-col items-center max-w-lg text-center">
                     <span className="text-7xl block mb-6 drop-shadow-lg">📥</span>
                     <h3 className="text-3xl font-bold mb-2">Listo para Descargar</h3>
