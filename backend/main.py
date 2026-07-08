@@ -162,7 +162,10 @@ async def prepare_stream(payload: dict, background_tasks: BackgroundTasks):
     # Check if already processed
     cached_job = check_local_cache(job_id)
     if cached_job:
-        return {"job_id": job_id, "status": "ready", "video_path": cached_job["video_path"]}
+        payload = {"job_id": job_id, "status": "ready", "video_path": cached_job["video_path"]}
+        if "multiple_videos" in cached_job:
+            payload["multiple_videos"] = cached_job["multiple_videos"]
+        return payload
         
     # Prevent starting multiple parallel downloads for the same job
     if job_id in JOBS and JOBS[job_id].get("status") not in ["error", "ready"]:
@@ -193,11 +196,12 @@ async def get_status(job_id: str):
 async def clean_job(job_id: str):
     if job_id in JOBS:
         job = JOBS[job_id]
-        if "local_path" in job and os.path.exists(job.get("local_path")):
+        if "local_path" in job:
             try:
-                # Remove entire directory
                 import shutil
-                shutil.rmtree(os.path.dirname(job["local_path"]))
+                extract_dir = os.path.join(DOWNLOAD_DIR, job_id)
+                if os.path.exists(extract_dir):
+                    shutil.rmtree(extract_dir)
             except Exception as e:
                 print(e)
         del JOBS[job_id]

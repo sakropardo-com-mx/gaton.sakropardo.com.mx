@@ -129,13 +129,8 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
     setStreamProgress(0);
 
     const start = async () => {
-      // If it's cached from previous page, just start it.
-      if (cachedUrl) {
-        setStreamStatus('ready');
-        setStreamVideoPath(cachedUrl);
-        setLocalCache(prev => ({...prev, [index]: true}));
-        return;
-      }
+      // Always fetch from /api/prepare to get the full payload (including multiple_videos)
+      // even if cached, because check_cache only returned the string path.
 
       setStreamStatus('started');
       try {
