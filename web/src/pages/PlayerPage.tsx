@@ -390,12 +390,23 @@ export function PlayerPage({ activeProfile }: { activeProfile: any }) {
        <div className="flex-1 flex items-center justify-center relative w-full h-full">
           <div key={streamVideoPath || 'loading-state'} className="w-full h-full flex items-center justify-center">
             {streamStatus === 'ready' && streamVideoPath ? (
-               <div className="w-full h-full relative group plyr-container">
-                  <Plyr 
-                    ref={plyrRef} 
-                    source={plyrSource as any} 
-                    options={plyrOptions as any} 
-                  />
+               <div className="w-full h-full flex flex-col items-center justify-center text-white p-8">
+                  <div className="bg-[#181818] border border-gray-700 p-10 rounded-2xl shadow-2xl flex flex-col items-center max-w-lg text-center">
+                    <span className="text-7xl block mb-6 drop-shadow-lg">🎬</span>
+                    <h3 className="text-3xl font-bold mb-2">Video Procesado</h3>
+                    <p className="text-gray-400 mb-8 text-sm">El archivo está listo. Gaton usará tu procesador local (Hardware Acceleration) para reproducir el formato MKV sin trabarse.</p>
+                    
+                    <a 
+                      href={`mpc://${window.location.origin}${streamVideoPath}`}
+                      className="w-full py-4 bg-[#E50914] text-white font-bold text-xl rounded shadow-lg hover:bg-red-700 hover:scale-105 transition-all mb-4"
+                    >
+                      ▶ Reproducir en MPC-HC
+                    </a>
+                    
+                    <p className="text-gray-500 text-xs">
+                      Asegúrate de haber instalado el archivo <code className="text-gray-400 bg-black px-1 py-0.5 rounded">protocolo_mpc.reg</code> en tu PC.
+                    </p>
+                  </div>
                </div>
             ) : streamStatus === 'error' ? (
                <div className="text-center text-white">
