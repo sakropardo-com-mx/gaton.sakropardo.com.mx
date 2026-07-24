@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
 export function MediaModal({ id, profileId, onClose }: { id: number; profileId: string; onClose: () => void }) {
@@ -12,7 +11,6 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
   const [tmdbEpisodes, setTmdbEpisodes] = useState<any[]>([]);
   const [serverCache, setServerCache] = useState<Record<string, string>>({});
   
-  const navigate = useNavigate();
 
   const cleanTitleText = (rawTitle: string) => {
     return rawTitle
@@ -133,7 +131,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
     };
   }) : [];
 
-  const startStream = (link: string, index: number, _displayNumber: string | number, _isSeason: boolean, episodeName: string, e: React.MouseEvent) => {
+  const startStream = (link: string, index: number, _displayNumber: string | number, _isSeason: boolean, _episodeName: string, e: React.MouseEvent) => {
     e.preventDefault();
     window.open(link, '_blank');
 
@@ -289,7 +287,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
               {episodesList.length > 0 ? (
                 <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                   {episodesList.map((ep: any) => {
-                    const { link, index, displayNumber, isSeason, episodeName, isCached } = ep;
+                    const { link, index, displayNumber, isSeason, episodeName } = ep;
                     
                     const progressData = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index] };
                     const isSeen = progressData.seen;
