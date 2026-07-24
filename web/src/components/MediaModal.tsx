@@ -315,7 +315,7 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                                 🔗 Descargar
                               </span>
                             </p>
-                            <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
+                            <p className="text-xs text-gray-400 break-all mt-1">{link}</p>
                           </div>
                         </div>
                       </button>
