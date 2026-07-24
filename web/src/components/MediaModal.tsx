@@ -135,17 +135,21 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
 
   const startStream = (link: string, index: number, _displayNumber: string | number, _isSeason: boolean, episodeName: string, e: React.MouseEvent) => {
     e.preventDefault();
-    navigate(`/play/${id}`, {
-      state: {
-        link,
-        index,
-        password: item?.contrasena || '',
-        episodeName,
-        cachedUrl: serverCache[link] || null,
-        allEpisodes: episodesList,
-        itemName: cleanTitleText(item?.nombre || item?.title || 'GatonPlay')
-      }
-    });
+    window.open(link, '_blank');
+
+    const prevData = typeof episodeProgress[index] === 'object' ? episodeProgress[index] : { seen: !!episodeProgress[index] };
+    if (!prevData.seen) {
+        const newProgress = { ...episodeProgress, [index]: { ...prevData, seen: true } };
+        setEpisodeProgress(newProgress);
+        supabase.from('interactions').upsert({
+            profile_id: profileId,
+            media_id: id,
+            is_in_list: isWatched,
+            rating: rating,
+            episode_progress: newProgress,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'profile_id,media_id' }).then();
+    }
   };
 
   const toggleWatched = async () => {
@@ -309,15 +313,9 @@ export function MediaModal({ id, profileId, onClose }: { id: number; profileId: 
                           <div>
                             <p className="font-bold text-white text-sm flex items-center gap-2">
                               {episodeName}
-                              {isCached ? (
-                                <span className="bg-green-600 text-xs px-2 py-0.5 rounded text-white font-bold ml-2 flex items-center gap-1">
-                                  ⚡ Listo
-                                </span>
-                              ) : (
-                                <span className="bg-[#E50914] text-xs px-2 py-0.5 rounded text-white font-bold ml-2">
-                                  ▶ Play
-                                </span>
-                              )}
+                              <span className="bg-[#E50914] text-xs px-2 py-0.5 rounded text-white font-bold ml-2">
+                                🔗 Descargar
+                              </span>
                             </p>
                             <p className="text-xs text-gray-400 truncate max-w-[200px] md:max-w-xs">{link}</p>
                           </div>
